@@ -20,7 +20,7 @@ async function bootstrap() {
       whitelist: true, // DTO에 정의되지 않은 속성 제거
       forbidNonWhitelisted: true, // 정의되지 않은 속성이 있으면 에러
       transform: true, // 타입 자동 변환
-    }),
+    })
   );
 
   // 전역 필터 및 인터셉터 설정
@@ -34,13 +34,15 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-  
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
+  app.setGlobalPrefix('api');
+
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  
+
   console.log(`🚀 SONA 서버가 http://localhost:${port} 에서 실행 중입니다.`);
   console.log(`📖 API 문서: http://localhost:${port}/api`);
 }
