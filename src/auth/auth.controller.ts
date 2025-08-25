@@ -15,7 +15,7 @@ import { ErrorResponseDto } from '../common/dto/error-response.dto';
 /**
  * 사용자 인증 관련 API 컨트롤러
  */
-@ApiTags('인증')
+@ApiTags('인증 정보 관리')
 @Controller('/v2/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
