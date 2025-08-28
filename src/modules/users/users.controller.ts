@@ -151,7 +151,6 @@ export class UsersController {
    * 사용자 삭제
    */
   @Delete()
-  @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '회원 탈퇴' })
@@ -190,7 +189,7 @@ export class UsersController {
    * 모든 사용자 조회
    */
   @Get()
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '사용자 목록 조회' })
   @ApiQuery({
