@@ -51,6 +51,10 @@ export class FollowsService {
    */
   async unfollow(currentUserId: string, targetUserId: string) {
     try {
+      if (currentUserId === targetUserId) {
+        throw new BadRequestException('자기 자신을 팔로우할 수 없습니다.');
+      }
+
       await this.prisma.follow.delete({
         where: {
           follower_id_followee_id: {

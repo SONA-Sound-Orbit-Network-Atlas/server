@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { FollowsService } from './follows.service';
 import {
   ApiBadRequestResponse,
@@ -51,11 +51,13 @@ export class FollowsController {
    */
   @Post('unfollow')
   @ApiOperation({ summary: '언 팔로우' })
-  @ApiBadRequestResponse({
+  @ApiResponse({
+    status: 400,
     description: '자기 자신 언팔로우',
     type: ErrorResponseDto,
   })
-  @ApiConflictResponse({
+  @ApiResponse({
+    status: 409,
     description: '팔로우하지 않은 사용자 언팔로우',
     type: ErrorResponseDto,
   })
@@ -67,5 +69,30 @@ export class FollowsController {
       currentUserId,
       deleteFollowDto.targetUserId
     );
+  }
+
+  /*
+   * 팔로우 팔로어 통계
+   */
+  @Get('stats')
+  @ApiOperation({ summary: '팔로우 팔로어 통계' })
+  @ApiResponse({ status: 200, description: '성공' })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자 없음',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: '서버 오류',
+    type: ErrorResponseDto,
+  })
+  async getStats(@User('id') currentUserId: string) {
+    return this.followsService.getStats(currentUserId);
   }
 }
