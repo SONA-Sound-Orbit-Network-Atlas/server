@@ -12,11 +12,9 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { CreateFollowDto, DeleteFollowDto } from './dto/follows.dto';
 import { User } from 'src/auth/decorator/user.decorator';
-import { create } from 'domain';
 
 @ApiTags('팔로우 정보 관리')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('follows')
 export class FollowsController {
   constructor(private readonly followsService: FollowsService) {}
@@ -25,6 +23,7 @@ export class FollowsController {
    * 팔로우 생성
    */
   @Post()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '팔로우 생성' })
   @ApiResponse({
     status: 400,
@@ -50,6 +49,7 @@ export class FollowsController {
    * 언 팔로우
    */
   @Post('unfollow')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '언 팔로우' })
   @ApiResponse({
     status: 400,
@@ -77,11 +77,6 @@ export class FollowsController {
   @Get('stats')
   @ApiOperation({ summary: '팔로우 팔로어 통계' })
   @ApiResponse({ status: 200, description: '성공' })
-  @ApiResponse({
-    status: 401,
-    description: '인증 실패',
-    type: ErrorResponseDto,
-  })
   @ApiResponse({
     status: 404,
     description: '사용자 없음',
