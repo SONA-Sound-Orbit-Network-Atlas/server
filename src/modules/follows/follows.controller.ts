@@ -11,6 +11,7 @@ import { FollowsService } from './follows.service';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -138,6 +139,18 @@ export class FollowsController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '나를 팔로워 목록' })
   @ApiResponse({ status: 200, description: '성공' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: '페이지 번호',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '페이지당 항목 수',
+    example: 20,
+  })
   @ApiResponse({
     status: 500,
     description: '서버 오류',
@@ -154,6 +167,18 @@ export class FollowsController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '내가 팔로잉하는 사람들 목록' })
   @ApiResponse({ status: 200, description: '성공' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: '페이지 번호',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '페이지당 항목 수',
+    example: 20,
+  })
   @ApiResponse({
     status: 500,
     description: '서버 오류',
@@ -169,6 +194,18 @@ export class FollowsController {
   @Get(':userId/followers')
   @ApiOperation({ summary: '특정 사용자 팔로워 목록' })
   @ApiResponse({ status: 200, description: '성공' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: '페이지 번호',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '페이지당 항목 수',
+    example: 20,
+  })
   @ApiResponse({
     status: 500,
     description: '서버 오류',
@@ -187,6 +224,18 @@ export class FollowsController {
   @Get(':userId/followings')
   @ApiOperation({ summary: '특정 사용자 팔로잉 목록' })
   @ApiResponse({ status: 200, description: '성공' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: '페이지 번호',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '페이지당 항목 수',
+    example: 20,
+  })
   @ApiResponse({
     status: 500,
     description: '서버 오류',
