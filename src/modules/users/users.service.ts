@@ -11,6 +11,7 @@ import {
   UpdatePasswordDto,
   DeleteAccountDto,
   UserResponseDto,
+  CreateAboutDto,
 } from './dto/user.dto';
 import { PaginatedResponse } from '../../common/dto/pagination.dto';
 import { AuthenticatedUser } from '../../auth/interfaces/auth.interface';
@@ -32,6 +33,8 @@ export class UsersService {
         id: true,
         email: true,
         username: true,
+        about: true,
+        image: true,
         created_at: true,
         updated_at: true,
       },
@@ -103,24 +106,27 @@ export class UsersService {
     return { message: '비밀번호가 변경 되었습니다.' };
   }
 
- /**
-  * 회원탈퇴(사용자 삭제)
-  */
- async deleteAccount(id: string, dto: DeleteAccountDto): Promise<{ message: string }> {
-   const user = await this.prisma.user.findUnique({
-     where: { id },
-   });
+  /**
+   * 회원탈퇴(사용자 삭제)
+   */
+  async deleteAccount(
+    id: string,
+    dto: DeleteAccountDto
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
 
-   if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
 
-   const ok = await bcrypt.compare(dto.password, user.password);
-   if (!ok) throw new ConflictException('비밀번호가 일치하지 않습니다.');
+    const ok = await bcrypt.compare(dto.password, user.password);
+    if (!ok) throw new ConflictException('비밀번호가 일치하지 않습니다.');
 
-   await this.prisma.user.delete({
-     where: { id },
-   });
+    await this.prisma.user.delete({
+      where: { id },
+    });
 
-   return { message: '회원탈퇴가 정상적으로 처리되었습니다.' };
+    return { message: '회원탈퇴가 정상적으로 처리되었습니다.' };
   }
 
   /**
@@ -134,9 +140,29 @@ export class UsersService {
     return user;
   }
 
+  /*
+   * 자기소개 생성/수정
+   */
+  async createAbout(id: string, dto: CreateAboutDto): Promise<UserResponseDto> {
+    const { about } = dto;
+    const updatedUser = await this.prisma.user.update({
+      where: { id },
+      data: { about, updated_at: new Date() },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        about: true,
+        created_at: true,
+        updated_at: true,
+      },
+    });
+    return updatedUser as UserResponseDto;
+  }
+
   /**
    * 나중에 사용가능성을 위해 남겨둠
-   * 모든 사용자 조회 (페이지네이션) 
+   * 모든 사용자 조회 (페이지네이션)
    */
   async findAllUsers(
     query: GetUsersQueryDto

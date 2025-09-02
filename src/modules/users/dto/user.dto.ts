@@ -21,11 +21,26 @@ export class UserResponseDto {
   @ApiProperty({ description: '사용자명', example: 'username123' })
   username: string;
 
-  @ApiProperty({ description: '계정 생성일', example: '2023-01-01T00:00:00.000Z' })
-  created_at: Date;
+  @ApiProperty({ description: '자기소개', example: 'Hello, I am a user.' })
+  about: string;
 
-  @ApiProperty({ description: '계정 수정일', example: '2023-01-02T12:34:56.000Z' })
+  @ApiProperty({
+    description: '프로필 이미지 URL',
+    example: 'https://example.com/profile.jpg',
+  })
+  image: string;
+
+  @ApiProperty({
+    description: '계정 수정일',
+    example: '2023-01-02T12:34:56.000Z',
+  })
   updated_at: Date;
+
+  @ApiProperty({
+    description: '계정 생성일',
+    example: '2023-01-01T00:00:00.000Z',
+  })
+  created_at: Date;
 }
 
 /**
@@ -77,7 +92,6 @@ export class DeleteAccountDto {
   password: string;
 }
 
-
 /**
  * 사용자 목록 조회 쿼리 DTO (검색 + 페이지네이션)
  */
@@ -89,4 +103,19 @@ export class GetUsersQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   search?: string;
+}
+
+/**
+ * 자기소개 생성 DTO
+ */
+export class CreateAboutDto {
+  @ApiProperty({
+    description: '자기소개',
+    example: 'Hello, I am a user.',
+    maxLength: 160,
+  })
+  @IsNotEmpty({ message: '자기소개는 필수입니다' })
+  @IsString({ message: '자기소개는 문자열이어야 합니다.' })
+  @MaxLength(160, { message: '자기소개는 최대 160자까지 가능합니다.' })
+  about: string;
 }

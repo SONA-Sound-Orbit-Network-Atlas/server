@@ -25,6 +25,7 @@ import {
   UpdatePasswordDto,
   DeleteAccountDto,
   GetUsersQueryDto,
+  CreateAboutDto,
 } from './dto/user.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { User } from 'src/auth/decorator/user.decorator';
@@ -186,10 +187,62 @@ export class UsersController {
   }
 
   /**
+   * 특정 사용자 정보 조회
+   */
+  @Get(':userId/profile')
+  @ApiOperation({ summary: '특정 사용자 정보 조회' })
+  @ApiResponse({
+    status: 200,
+    description: '사용자 조회 성공',
+    type: UserResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자를 찾을 수 없음',
+    type: ErrorResponseDto,
+  })
+  async getUserProfile(@Param('userId') userId: string) {
+    return this.usersService.getProfile(userId);
+  }
+
+  /*
+   * 자기 소개 작성 + 수정
+   */
+  @Patch('/about')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '자기 소개 작성/수정' })
+  @ApiParam({
+    name: 'id',
+    description: '사용자 ID',
+    example: 'clp123abc456def',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '자기 소개 작성/수정 성공',
+    type: UserResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자를 찾을 수 없음',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  async createOrUpdateAbout(
+    @User('id') id: string,
+    @Body() createAboutDto: CreateAboutDto
+  ) {
+    return this.usersService.createAbout(id, createAboutDto);
+  }
+
+  /**
    * 모든 사용자 조회
    */
   @Get()
-  // @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '사용자 목록 조회' })
   @ApiQuery({
