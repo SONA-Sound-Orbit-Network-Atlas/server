@@ -17,13 +17,14 @@ datasource db {
 // 은하(갤럭시) → 항성계 → 행성(궤도/사운드) 구조
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  username   String   @unique
-  password   String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
+  id               String          @id @default(cuid())
+  email            String          @unique
+  username         String          @unique
+  password         String
+  about            String? // 자기소개
+  image            String? // 프로필 이미지 URL
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
   // 관계: 사용자가 소유한 갤럭시들
   galaxies         Galaxy[]
   // 관계: 사용자가 소유한 항성계들
@@ -61,11 +62,11 @@ model StellarSystem {
   id                 String   @id @default(cuid())
   galaxy_id          String
   owner_id           String
-  original_author_id String?  // 원작자 (클론인 경우)
-  source_system_id   String?  // 원본 시스템 (클론인 경우)
+  original_author_id String? // 원작자 (클론인 경우)
+  source_system_id   String? // 원본 시스템 (클론인 경우)
   title              String
   bpm                Int      @default(120)
-  x                  Float    @default(0)  // 초기 배치 좌표
+  x                  Float    @default(0) // 초기 배치 좌표
   y                  Float    @default(0)
   z                  Float    @default(0)
   created_at         DateTime @default(now())
@@ -90,23 +91,23 @@ model StellarSystem {
 }
 
 model Planet {
-  id                    String  @id @default(cuid())
+  id                    String   @id @default(cuid())
   system_id             String
   name                  String
   // 궤도 파라미터 (DB에 좌표 저장하지 않고 런타임 계산)
-  orbit_type            String  @default("circle") // 'circle' | 'ellipse'
-  orbit_radius          Float?  // 원형 궤도의 반지름
-  orbit_a               Float?  // 타원 궤도의 장축
-  orbit_b               Float?  // 타원 궤도의 단축
-  orbit_rotation_deg    Float   @default(0)        // 궤도 회전각
-  orbit_inclination_deg Float   @default(0)        // 궤도 기울기
-  orbit_phase0          Float   @default(0)        // 초기 위상
-  orbit_angular_speed   Float   @default(1)        // 각속도
+  orbit_type            String   @default("circle") // 'circle' | 'ellipse'
+  orbit_radius          Float? // 원형 궤도의 반지름
+  orbit_a               Float? // 타원 궤도의 장축
+  orbit_b               Float? // 타원 궤도의 단축
+  orbit_rotation_deg    Float    @default(0) // 궤도 회전각
+  orbit_inclination_deg Float    @default(0) // 궤도 기울기
+  orbit_phase0          Float    @default(0) // 초기 위상
+  orbit_angular_speed   Float    @default(1) // 각속도
   // 사운드 관련
-  instrument_type       String  @default("synth")  // 악기 타입
-  params                Json    @default("{}")     // 악기 파라미터 (JSON)
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
+  instrument_type       String   @default("synth") // 악기 타입
+  params                Json     @default("{}") // 악기 파라미터 (JSON)
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
 
   // 관계: 소속 항성계
   system  StellarSystem @relation(fields: [system_id], references: [id], onDelete: Cascade)
@@ -119,17 +120,17 @@ model Planet {
 model Pattern {
   id                String   @id @default(cuid())
   planet_id         String   @unique // 행성과 1:1 관계
-  steps_jsonb       Json     @default("[]")      // [{i,n,v,g?}] 형태의 스텝 배열
-  length_steps      Int      @default(16)        // 패턴 길이 (스텝 수)
-  resolution        String   @default("16n")     // '8n'|'16n'|'32n'
-  source_pattern_id String?  // 원본 패턴 (복사인 경우)
+  steps_jsonb       Json     @default("[]") // [{i,n,v,g?}] 형태의 스텝 배열
+  length_steps      Int      @default(16) // 패턴 길이 (스텝 수)
+  resolution        String   @default("16n") // '8n'|'16n'|'32n'
+  source_pattern_id String? // 원본 패턴 (복사인 경우)
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
 
   // 관계: 소속 행성
-  planet         Planet    @relation(fields: [planet_id], references: [id], onDelete: Cascade)
+  planet          Planet    @relation(fields: [planet_id], references: [id], onDelete: Cascade)
   // 관계: 원본 패턴 (셀프 참조)
-  source_pattern Pattern? @relation(fields: [source_pattern_id], references: [id], name: "SourcePattern")
+  source_pattern  Pattern?  @relation(fields: [source_pattern_id], references: [id], name: "SourcePattern")
   // 관계: 이 패턴을 복사한 패턴들
   copied_patterns Pattern[] @relation("SourcePattern")
 
@@ -137,9 +138,9 @@ model Pattern {
 }
 
 model Like {
-  id        String   @id @default(cuid())
-  user_id   String
-  system_id String
+  id         String   @id @default(cuid())
+  user_id    String
+  system_id  String
   created_at DateTime @default(now())
 
   // 관계: 좋아요한 사용자
@@ -164,17 +165,19 @@ model Follow {
 
   // 복합 Primary Key
   @@id([follower_id, followee_id])
+  @@index([followee_id], map: "idx_follow_followee") //조회 성능을 위해 인덱스를 추가
+  @@index([follower_id], map: "idx_follow_follower")
   @@map("follows")
 }
 
 model Notification {
   id          String   @id @default(cuid())
-  user_id     String   // 알림을 받을 사용자
-  type        String   // 알림 타입 ('like', 'follow', 'clone', etc.)
-  entity_type String   // 엔티티 타입 ('stellar_system', 'user', etc.)
-  entity_id   String   // 엔티티 ID
-  actor_id    String?  // 알림을 발생시킨 사용자 ID
-  message     String?  // 알림 메시지
+  user_id     String // 알림을 받을 사용자
+  type        String // 알림 타입 ('like', 'follow', 'clone', etc.)
+  entity_type String // 엔티티 타입 ('stellar_system', 'user', etc.)
+  entity_id   String // 엔티티 ID
+  actor_id    String? // 알림을 발생시킨 사용자 ID
+  message     String? // 알림 메시지
   read        Boolean  @default(false)
   created_at  DateTime @default(now())
 

@@ -32,9 +32,15 @@ export class FollowsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '팔로우 생성' })
+  @ApiResponse({ status: 201, description: '성공' })
   @ApiResponse({
     status: 400,
     description: '자기 자신 팔로우',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -58,9 +64,15 @@ export class FollowsController {
   @Post('unfollow')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '언 팔로우' })
+  @ApiResponse({ status: 200, description: '성공' })
   @ApiResponse({
     status: 400,
     description: '자기 자신 언팔로우',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
     type: ErrorResponseDto,
   })
   @ApiResponse({
