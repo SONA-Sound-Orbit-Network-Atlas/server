@@ -37,6 +37,11 @@ export class PaginationDto {
   get skip(): number {
     return ((this.page ?? 1) - 1) * (this.limit ?? 20);
   }
+
+  /** Prisma take */
+  get take(): number {
+    return this.limit ?? 20;
+  }
 }
 
 /**
