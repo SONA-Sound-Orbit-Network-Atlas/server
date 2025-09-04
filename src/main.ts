@@ -4,6 +4,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { promises as fs } from 'fs';
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -39,6 +41,9 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
 
   app.setGlobalPrefix('api');
+
+  const root = process.env.UPLOAD_DIR || 'uploads';
+  await fs.mkdir(join(process.cwd(), root), { recursive: true });
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
