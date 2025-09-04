@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { ConfigModule } from '@nestjs/config';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -13,6 +15,10 @@ import { FollowsModule } from './modules/follows/follows.module';
  */
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'), // 정적 폴더
+      serveRoot: '/uploads', // URL prefix
+    }),
     // 환경변수 설정
     ConfigModule.forRoot({
       isGlobal: true,

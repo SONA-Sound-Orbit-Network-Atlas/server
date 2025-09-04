@@ -9,6 +9,9 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  Post,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +20,8 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import {
@@ -30,6 +35,8 @@ import {
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { User } from 'src/auth/decorator/user.decorator';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ImageFileParsePipe } from './images/image-file.pipe';
 
 /**
  * 사용자 관리 API 컨트롤러
@@ -239,11 +246,64 @@ export class UsersController {
     return this.usersService.createAbout(id, createAboutDto);
   }
 
+  /*
+   * 프로필 이미지 업로드/교체
+   */
+  @Post('me/img')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '프로필 이미지 업로드/교체' })
+  @ApiResponse({
+    status: 200,
+    description: '이미지 등록 성공',
+    type: UserResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadImage(
+    @User('id') userId: string,
+    @UploadedFile(new ImageFileParsePipe()) file: Express.Multer.File
+  ) {
+    return this.usersService.uploadImage(userId, file);
+  }
+
+  /*
+   * 프로필 이미지 삭제
+   */
+  @Delete('me/img')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '프로필 이미지 삭제' })
+  @ApiResponse({
+    status: 200,
+    description: '이미지 삭제 성공',
+    type: UserResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  async removeImage(@User('id') userId: string) {
+    return this.usersService.removeImage(userId);
+  }
+
   /**
    * 모든 사용자 조회
    */
   @Get()
-  @ApiBearerAuth()
   @ApiOperation({ summary: '사용자 목록 조회' })
   @ApiQuery({
     name: 'page',
@@ -257,20 +317,9 @@ export class UsersController {
     description: '페이지당 항목 수',
     example: 20,
   })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    description: '사용자명/이메일 검색',
-    example: 'john',
-  })
   @ApiResponse({
     status: 200,
     description: '사용자 목록 조회 성공',
-  })
-  @ApiResponse({
-    status: 401,
-    description: '인증 실패',
-    type: ErrorResponseDto,
   })
   async findAll(@Query() query: GetUsersQueryDto) {
     return this.usersService.findAllUsers(query);
