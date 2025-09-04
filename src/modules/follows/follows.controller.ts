@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -62,7 +63,7 @@ export class FollowsController {
   /*
    * 언 팔로우
    */
-  @Post('unfollow')
+  @Delete()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '언 팔로우' })
