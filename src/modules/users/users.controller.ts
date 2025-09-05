@@ -9,6 +9,10 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  Post,
+  Put,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,18 +21,22 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import {
   UserResponseDto,
-  UpdateUsernameDto,
   UpdatePasswordDto,
   DeleteAccountDto,
   GetUsersQueryDto,
+  UpdateProfileDto,
 } from './dto/user.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { User } from 'src/auth/decorator/user.decorator';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ImageFileParsePipe } from './images/image-file.pipe';
 
 /**
  * 사용자 관리 API 컨트롤러
@@ -70,30 +78,21 @@ export class UsersController {
   }
 
   /**
-   * 사용자 이름 수정
+   * 사용자 이름 + 자기소개 변경
    */
-  @Patch('/username')
+  @Put('/profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '사용자 이름 수정' })
+  @ApiOperation({ summary: '프로필 수정(About, Username)' })
   @ApiParam({
     name: 'id',
     description: '사용자 ID',
     example: 'clp123abc456def',
   })
+  @ApiResponse({ status: 200, description: '프로필 수정 성공' })
   @ApiResponse({
-    status: 200,
-    description: '사용자 정보 수정 성공',
-    type: UserResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: '사용자를 찾을 수 없음',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 409,
-    description: '사용자명 중복',
+    status: 400,
+    description: '잘못된 요청',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -101,11 +100,13 @@ export class UsersController {
     description: '인증 실패',
     type: ErrorResponseDto,
   })
-  async update(
-    @User('id') id: string,
-    @Body() UpdateUsernameDto: UpdateUsernameDto
-  ) {
-    return this.usersService.updateUsername(id, UpdateUsernameDto);
+  @ApiResponse({
+    status: 409,
+    description: '중복 사용자명',
+    type: ErrorResponseDto,
+  })
+  updateProfile(@User('id') userId: string, @Body() dto: UpdateProfileDto) {
+    return this.usersService.updateProfile(userId, dto);
   }
 
   /**
@@ -202,10 +203,82 @@ export class UsersController {
   }
 
   /**
+   * 특정 사용자 정보 조회
+   */
+  @Get(':userId/profile')
+  @ApiOperation({ summary: '특정 사용자 정보 조회' })
+  @ApiResponse({
+    status: 200,
+    description: '사용자 조회 성공',
+    type: UserResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자를 찾을 수 없음',
+    type: ErrorResponseDto,
+  })
+  async getUserProfile(@Param('userId') userId: string) {
+    return this.usersService.getProfile(userId);
+  }
+
+  /*
+   * 프로필 이미지 업로드/교체
+   */
+  @Post('me/img')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '프로필 이미지 업로드/교체' })
+  @ApiResponse({
+    status: 200,
+    description: '이미지 등록 성공',
+    type: UserResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadImage(
+    @User('id') userId: string,
+    @UploadedFile(new ImageFileParsePipe()) file: Express.Multer.File
+  ) {
+    return this.usersService.uploadImage(userId, file);
+  }
+
+  /*
+   * 프로필 이미지 삭제
+   */
+  @Delete('me/img')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '프로필 이미지 삭제' })
+  @ApiResponse({
+    status: 200,
+    description: '이미지 삭제 성공',
+    type: UserResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  async removeImage(@User('id') userId: string) {
+    return this.usersService.removeImage(userId);
+  }
+
+  /**
    * 모든 사용자 조회
    */
   @Get()
-  @ApiBearerAuth()
   @ApiOperation({ summary: '사용자 목록 조회' })
   @ApiQuery({
     name: 'page',
@@ -218,12 +291,6 @@ export class UsersController {
     required: false,
     description: '페이지당 항목 수',
     example: 20,
-  })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    description: '사용자명/이메일 검색',
-    example: 'john',
   })
   @ApiResponse({
     status: 200,

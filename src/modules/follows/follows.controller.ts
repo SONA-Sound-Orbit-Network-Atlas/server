@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -22,7 +23,6 @@ import { User } from 'src/auth/decorator/user.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags('팔로우 정보 관리')
-@ApiBearerAuth()
 @Controller('follows')
 export class FollowsController {
   constructor(private readonly followsService: FollowsService) {}
@@ -32,6 +32,7 @@ export class FollowsController {
    */
   @Post()
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: '팔로우 생성' })
   @ApiResponse({ status: 201, description: '성공' })
   @ApiResponse({
@@ -62,8 +63,9 @@ export class FollowsController {
   /*
    * 언 팔로우
    */
-  @Post('unfollow')
+  @Delete()
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: '언 팔로우' })
   @ApiResponse({ status: 200, description: '성공' })
   @ApiResponse({
@@ -96,6 +98,7 @@ export class FollowsController {
    */
   @Get('me/stats')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: '팔로우 팔로어 통계' })
   @ApiResponse({ status: 200, description: '성공' })
   @ApiResponse({
@@ -137,6 +140,7 @@ export class FollowsController {
    */
   @Get('me/followers')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: '나를 팔로워 목록' })
   @ApiResponse({ status: 200, description: '성공' })
   @ApiQuery({
@@ -165,6 +169,7 @@ export class FollowsController {
    */
   @Get('me/followings')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: '내가 팔로잉하는 사람들 목록' })
   @ApiResponse({ status: 200, description: '성공' })
   @ApiQuery({
@@ -256,6 +261,7 @@ export class FollowsController {
    */
   @Get('me/relationship/:targetId')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   async getMyRelationship(
     @User('id') me: string,
     @Param('targetId') targetId: string
