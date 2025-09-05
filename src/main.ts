@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
+import { createSwaggerConfig } from './config/swagger.config';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -29,15 +30,9 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new LoggingInterceptor());
 
-  // Swagger 문서 설정
-  const config = new DocumentBuilder()
-    .setTitle('SONA API')
-    .setDescription('SONA 프로젝트 - 음악적 우주 생성 플랫폼 API')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
+  // Swagger 문서 설정 (재사용 설정 사용)
+  const swaggerConfig = createSwaggerConfig();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api', app, document);
 
   app.setGlobalPrefix('api');
@@ -52,4 +47,7 @@ async function bootstrap() {
   console.log(`📖 API 문서: http://localhost:${port}/api`);
 }
 
-bootstrap();
+bootstrap().catch(err => {
+  // 초기 부트스트랩 실패 시 에러 로깅
+  console.error('애플리케이션 부트스트랩 실패:', err);
+});
