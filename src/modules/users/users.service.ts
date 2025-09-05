@@ -9,22 +9,21 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   GetUsersQueryDto,
-  UpdateUsernameDto,
+  UpdateProfileDto,
   UpdatePasswordDto,
   DeleteAccountDto,
   UserResponseDto,
-  CreateAboutDto,
 } from './dto/user.dto';
 import { PaginatedResponse } from '../../common/dto/pagination.dto';
 import { AuthenticatedUser } from '../../auth/interfaces/auth.interface';
 import { LocalStorageService } from './images/local-storage.service';
-import { toPublicUrlOrFallback } from './images/image-path.util'; 
+import { toPublicUrlOrFallback } from './images/image-path.util';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly localStorage: LocalStorageService,
+    private readonly localStorage: LocalStorageService
   ) {}
 
   /**
@@ -38,7 +37,7 @@ export class UsersService {
         email: true,
         username: true,
         about: true,
-        image: true,       
+        image: true,
         created_at: true,
         updated_at: true,
       },
@@ -48,43 +47,57 @@ export class UsersService {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
 
-    const image = toPublicUrlOrFallback(user.image); 
+    const image = toPublicUrlOrFallback(user.image);
     return { ...user, image };
   }
 
-  /**
-   * 사용자 이름 정보 수정
-   */
-  async updateUsername(
-    id: string,
-    dto: UpdateUsernameDto,
-  ): Promise<UserResponseDto> {
-    const { username } = dto;
 
-    // 사용자명 중복 확인
-    const existingUser = await this.prisma.user.findUnique({
-      where: { username },
-    });
-    if (existingUser) {
-      throw new ConflictException('이미 사용 중인 사용자명입니다.');
+  /**
+   * 사용자 이름 정보 수정 + about 수정
+   */
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const { username, about } = dto;
+
+    // 아무 필드 없는 빈 요청 방지
+    if (username === undefined && about === undefined) {
+      throw new BadRequestException('수정할 필드를 최소 1개 이상 보내주세요.');
     }
 
-    // 사용자명 업데이트
+    // username 변경 시 중복 확인 (나 자신 제외)
+    if (username !== undefined) {
+      const dup = await this.prisma.user.findFirst({
+        where: {
+          username,
+          NOT: { id: userId },
+        },
+        select: { id: true },
+      });
+      if (dup) {
+        throw new ConflictException('이미 사용 중인 사용자명입니다.');
+      }
+    }
     const updated = await this.prisma.user.update({
-      where: { id },
-      data: { username, updated_at: new Date() },
+      where: { id: userId },
+      data: {
+        ...(username !== undefined && { username }),
+        ...(about !== undefined && { about }),
+        updated_at: new Date(),
+      },
       select: {
         id: true,
         email: true,
         username: true,
         about: true,
-        image: true,       
+        image: true,
         created_at: true,
         updated_at: true,
       },
     });
 
-    return { ...updated, image: toPublicUrlOrFallback(updated.image) };
+    return {
+      message: '프로필이 성공적으로 수정되었습니다.',
+      user: updated,
+    };
   }
 
   /**
@@ -92,7 +105,7 @@ export class UsersService {
    */
   async updatePassword(
     id: string,
-    dto: UpdatePasswordDto,
+    dto: UpdatePasswordDto
   ): Promise<{ message: string }> {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
@@ -115,7 +128,7 @@ export class UsersService {
    */
   async deleteAccount(
     id: string,
-    dto: DeleteAccountDto,
+    dto: DeleteAccountDto
   ): Promise<{ message: string }> {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
@@ -136,31 +149,10 @@ export class UsersService {
   }
 
   /**
-   * 자기소개 생성/수정
-   */
-  async createAbout(id: string, dto: CreateAboutDto): Promise<UserResponseDto> {
-    const { about } = dto;
-    const updated = await this.prisma.user.update({
-      where: { id },
-      data: { about, updated_at: new Date() },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        about: true,
-        image: true,      
-        created_at: true,
-        updated_at: true,
-      },
-    });
-    return { ...updated, image: toPublicUrlOrFallback(updated.image) };
-  }
-
-  /**
    * 프로필 이미지 업로드/교체 (상대경로 저장, 응답은 URL string)
    */
   async uploadImage(userId: string, file: Express.Multer.File) {
-    if (!file) throw new BadRequestException('파일이 필요합니다.'); 
+    if (!file) throw new BadRequestException('파일이 필요합니다.');
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('사용자를 찾을 수 없습니다.');
@@ -185,8 +177,8 @@ export class UsersService {
     });
 
     return {
-      message: '프로필 이미지가 업데이트되었습니다.', 
-      image: toPublicUrlOrFallback(updated.image),   
+      message: '프로필 이미지가 업데이트되었습니다.',
+      image: toPublicUrlOrFallback(updated.image),
     };
   }
 
@@ -216,7 +208,7 @@ export class UsersService {
    * 모든 사용자 조회 (페이지네이션)
    */
   async findAllUsers(
-    query: GetUsersQueryDto,
+    query: GetUsersQueryDto
   ): Promise<PaginatedResponse<AuthenticatedUser>> {
     const { page = 1, limit = 20, search } = query;
     const skip = (page - 1) * limit;

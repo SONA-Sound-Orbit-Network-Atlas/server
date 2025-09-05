@@ -26,7 +26,7 @@ export class UserResponseDto {
   @ApiProperty({
     description: '자기소개 (없으면 null)',
     example: 'Hello, I am a user.',
-    nullable: true, 
+    nullable: true,
   })
   about: string | null;
 
@@ -53,20 +53,29 @@ export class UserResponseDto {
 }
 
 /**
- * 사용자명 변경 DTO
+ * 사용자명 + 자기소개 변경 DTO
  */
-export class UpdateUsernameDto {
-  @ApiProperty({
+
+export class UpdateProfileDto {
+  @ApiPropertyOptional({
+    description: '자기소개',
+    example: 'Hello, I am a user.',
+    maxLength: 160,
+  })
+  @IsString({ message: '자기소개는 문자열이어야 합니다.' })
+  @MaxLength(160, { message: '자기소개는 최대 160자까지 가능합니다.' })
+  about?: string;
+
+  @ApiPropertyOptional({
     description: '새 사용자명',
     example: 'newusername123',
     minLength: 3,
     maxLength: 20,
   })
-  @IsNotEmpty({ message: '사용자명은 필수입니다.' })
   @IsString({ message: '사용자명은 문자열이어야 합니다.' })
   @MinLength(3, { message: '사용자명은 최소 3자 이상이어야 합니다.' })
   @MaxLength(20, { message: '사용자명은 최대 20자까지 가능합니다.' })
-  username: string;
+  username?: string;
 }
 
 /**
@@ -109,19 +118,4 @@ export class GetUsersQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   search?: string;
-}
-
-/**
- * 자기소개 생성/수정 DTO
- */
-export class CreateAboutDto {
-  @ApiProperty({
-    description: '자기소개',
-    example: 'Hello, I am a user.',
-    maxLength: 160,
-  })
-  @IsNotEmpty({ message: '자기소개는 필수입니다.' })
-  @IsString({ message: '자기소개는 문자열이어야 합니다.' })
-  @MaxLength(160, { message: '자기소개는 최대 160자까지 가능합니다.' })
-  about: string;
 }
