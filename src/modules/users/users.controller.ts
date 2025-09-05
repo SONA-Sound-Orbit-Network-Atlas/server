@@ -32,8 +32,8 @@ import {
   GetUsersQueryDto,
   UpdateProfileDto,
 } from './dto/user.dto';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import { User } from 'src/auth/decorator/user.decorator';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { User } from '../../auth/decorator/user.decorator';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageFileParsePipe } from './images/image-file.pipe';
@@ -184,22 +184,6 @@ export class UsersController {
     @Body() deleteAccountDto: DeleteAccountDto
   ) {
     return this.usersService.deleteAccount(id, deleteAccountDto);
-  }
-
-  @Get(':userId/profile')
-  @ApiOperation({ summary: '특정 사용자 정보 조회' })
-  @ApiResponse({
-    status: 200,
-    description: '사용자 조회 성공',
-    type: UserResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: '사용자를 찾을 수 없음',
-    type: ErrorResponseDto,
-  })
-  async getUserProfile(@Param('userId') userId: string) {
-    return this.usersService.getProfile(userId);
   }
 
   /**

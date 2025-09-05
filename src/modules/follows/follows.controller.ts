@@ -16,11 +16,11 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { CreateFollowDto, DeleteFollowDto } from './dto/follows.dto';
-import { User } from 'src/auth/decorator/user.decorator';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { User } from '../../auth/decorator/user.decorator';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @ApiTags('팔로우 정보 관리')
 @Controller('follows')
