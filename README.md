@@ -1,6 +1,14 @@
 # SONA 백엔드 서버
 
+[![Deploy Swagger UI](https://github.com/SONA-Sound-Orbit-Network-Atlas/server/actions/workflows/swagger-deploy.yml/badge.svg)](https://github.com/SONA-Sound-Orbit-Network-Atlas/server/actions/workflows/swagger-deploy.yml)
+[![API Documentation](https://img.shields.io/badge/API-Documentation-blue)](https://sona-sound-orbit-network-atlas.github.io/server/)
+
 SONA는 "은하(갤럭시) → 항성계 → 행성(궤도/사운드)"을 구현하는 프로젝트입니다. 이 저장소는 NestJS, Prisma, PostgreSQL을 사용하는 백엔드 부분입니다.
+
+## 📖 API 문서
+
+- **로컬 개발**: [http://localhost:3000/api](http://localhost:3000/api)
+- **온라인 문서**: [https://sona-sound-orbit-network-atlas.github.io/server/](https://sona-sound-orbit-network-atlas.github.io/server/)
 
 ## 기술 스택
 
