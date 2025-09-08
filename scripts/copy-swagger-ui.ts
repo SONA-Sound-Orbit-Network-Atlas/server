@@ -30,15 +30,56 @@ try {
   process.exit(1);
 }
 
-// swagger-ui-dist의 모든 파일을 복사
-const assets = fs.readdirSync(swaggerUiRoot).filter(f => !f.startsWith('.'));
-assets.forEach(file => {
-  const src = path.join(swaggerUiRoot, file);
-  const dest = path.join(distDir, file);
-  if (fs.lstatSync(src).isFile()) {
-    fs.copyFileSync(src, dest);
+import * as fs from 'fs-extra';
+import * as path from 'path';
+
+// CI/CD 환경과 로컬 환경 모두에서 안정적으로 동작하도록 절대 경로를 사용합니다.
+const projectRoot = process.cwd();
+const swaggerUiDistPath = path.dirname(
+  require.resolve('swagger-ui-dist/package.json'),
+);
+const sourcePath = swaggerUiDistPath;
+const targetPath = path.join(projectRoot, 'swagger-ui');
+
+async function copySwaggerUI() {
+  try {
+    console.log('Swagger UI 파일 복사를 시작합니다...');
+    console.log(`소스 경로: ${sourcePath}`);
+    console.log(`대상 경로: ${targetPath}`);
+
+    // 기존 swagger-ui 폴더가 있다면 삭제합니다.
+    await fs.remove(targetPath);
+    console.log('기존 swagger-ui 폴더를 삭제했습니다.');
+
+    // swagger-ui-dist의 모든 파일을 swagger-ui 폴더로 복사합니다.
+    await fs.copy(sourcePath, targetPath);
+    console.log('Swagger UI 파일 복사를 완료했습니다.');
+
+    // swagger.json을 로드하도록 index.html 파일을 수정합니다.
+    const indexPath = path.join(targetPath, 'index.html');
+    console.log(`index.html 파일 경로: ${indexPath}`);
+
+    let indexContent = await fs.readFile(indexPath, 'utf8');
+    console.log('index.html 파일을 읽었습니다.');
+
+    // 기존 url을 swagger.json을 가리키도록 변경합니다.
+    indexContent = indexContent.replace(
+      /url: ".*",/,
+      `url: "./swagger.json",`,
+    );
+    console.log('index.html 내용 수정을 완료했습니다.');
+
+    await fs.writeFile(indexPath, indexContent, 'utf8');
+    console.log('수정된 index.html 파일을 저장했습니다.');
+
+    console.log('Swagger UI 준비가 완료되었습니다.');
+  } catch (err) {
+    console.error('Swagger UI 준비 중 오류 발생:', err);
+    process.exit(1);
   }
-});
+}
+
+copySwaggerUI();
 
 // 기본 index.html을 찾아서 수정 (swagger.json 경로만 변경)
 const originalIndexPath = path.join(swaggerUiRoot, 'index.html');

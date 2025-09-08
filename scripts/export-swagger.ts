@@ -7,14 +7,29 @@ import { SwaggerGenModule } from '../src/swagger-gen.module';
 import { createSwaggerConfig } from '../src/config/swagger.config';
 
 async function exportSwagger() {
+  console.log('1. Swagger 문서 생성을 시작합니다...');
+
+  console.log('2. NestFactory.create를 호출합니다...');
   const app = await NestFactory.create(SwaggerGenModule, { logger: false });
+  console.log('3. Nest 애플리케이션 인스턴스 생성 완료.');
+
+  console.log('4. Swagger 설정을 생성합니다...');
   const swaggerConfig = createSwaggerConfig();
+  console.log('5. Swagger 설정 생성 완료.');
+
+  console.log('6. Swagger 문서를 생성합니다...');
   const document = SwaggerModule.createDocument(app, swaggerConfig);
+  console.log('7. Swagger 문서 생성 완료.');
+
+  console.log('8. swagger.json 파일로 저장합니다...');
   writeFileSync('swagger.json', JSON.stringify(document, null, 2), {
     encoding: 'utf8',
   });
-  console.log('swagger.json 생성 완료');
+  console.log('9. swagger.json 파일 저장 완료.');
+
+  console.log('10. 애플리케이션을 종료합니다...');
   await app.close();
+  console.log('11. 애플리케이션 종료 완료.');
 }
 
 exportSwagger().catch((err) => {
