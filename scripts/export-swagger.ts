@@ -3,11 +3,11 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
 import { writeFileSync } from 'fs';
-import { AppModule } from '../src/app.module';
+import { SwaggerGenModule } from '../src/swagger-gen.module';
 import { createSwaggerConfig } from '../src/config/swagger.config';
 
 async function exportSwagger() {
-  const app = await NestFactory.create(AppModule, { logger: false });
+  const app = await NestFactory.create(SwaggerGenModule, { logger: false });
   const swaggerConfig = createSwaggerConfig();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   writeFileSync('swagger.json', JSON.stringify(document, null, 2), {
