@@ -22,7 +22,9 @@ async function copySwaggerUI() {
 
     // swagger.json 파일이 존재하는지 확인합니다.
     if (!fs.existsSync(swaggerJsonPath)) {
-      console.error('swagger.json이 존재하지 않습니다. 먼저 npm run export:swagger를 실행하세요.');
+      console.error(
+        'swagger.json이 존재하지 않습니다. 먼저 npm run export:swagger를 실행하세요.'
+      );
       process.exit(1);
     }
 
@@ -47,10 +49,7 @@ async function copySwaggerUI() {
       './swagger.json'
     );
     // URL 패턴도 변경합니다.
-    indexContent = indexContent.replace(
-      /url: ".*",/,
-      'url: "./swagger.json",'
-    );
+    indexContent = indexContent.replace(/url: ".*",/, 'url: "./swagger.json",');
     // 타이틀을 변경합니다.
     indexContent = indexContent.replace(
       '<title>Swagger UI</title>',
@@ -72,7 +71,7 @@ async function copySwaggerUI() {
   }
 }
 
-copySwaggerUI().catch((err) => {
+copySwaggerUI().catch(err => {
   console.error('Swagger UI 복사 실패:', err);
   process.exit(1);
 });
