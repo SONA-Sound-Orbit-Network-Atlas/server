@@ -5,12 +5,21 @@ import {
   HttpCode,
   HttpStatus,
   UnauthorizedException,
+  Res,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Response } from 'express';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto, CreateUserDto, LoginResponseDto } from './dto/auth.dto';
 import { AuthenticatedUser } from '../auth/interfaces/auth.interface';
 import { ErrorResponseDto } from '../common/dto/error-response.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 /**
  * 사용자 인증 관련 API 컨트롤러
@@ -68,5 +77,31 @@ export class AuthController {
   })
   async login(@Body() body: LoginDto): Promise<LoginResponseDto> {
     return this.authService.login(body);
+  }
+
+  /**
+   *로그아웃
+   */
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '사용자 로그아웃' })
+  @ApiResponse({
+    status: 200,
+    description: '로그아웃 성공',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+    });
   }
 }
