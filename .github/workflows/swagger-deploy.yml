@@ -49,25 +49,25 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Install dependencies
-        working-directory: server
+        working-directory: .
         run: |
           npm ci
           npm install swagger-ui-dist --no-save
 
       - name: Generate Swagger JSON
-        working-directory: server
+        working-directory: .
         run: npm run export:swagger
         env:
           NODE_ENV: production
 
       - name: Prepare Swagger UI
-        working-directory: server
+        working-directory: .
         run: npm run swagger:ui:prepare
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: server/swagger-ui
+          path: swagger-ui
           name: github-pages
           retention-days: 1
 
