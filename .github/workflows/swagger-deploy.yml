@@ -17,6 +17,11 @@ jobs:
   # 빌드 및 정적 파일 생성 작업
   build:
     runs-on: ubuntu-latest
+    # 이 작업(job)의 모든 단계(step)에 대한 기본 설정을 지정합니다.
+    defaults:
+      run:
+        # 모든 run 명령어는 server 디렉토리 내에서 실행됩니다.
+        working-directory: ./server
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,17 +31,16 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          # 현재 리포지토리의 package-lock.json을 캐시 키로 사용
-          cache-dependency-path: package-lock.json
+          # server 디렉토리의 package-lock.json을 캐시 키로 사용
+          cache-dependency-path: server/package-lock.json
 
       - name: Install dependencies
-        # 현재 디렉토리에서 npm install 실행 (server 폴더가 이미 루트)
+        # working-directory가 defaults로 설정되었으므로 여기서는 제거합니다.
         run: npm install
 
       - name: Generate Swagger JSON
-        # server 디렉토리에서 스크립트 실행
+        # working-directory가 defaults로 설정되었으므로 여기서는 제거합니다.
         run: npm run export:swagger
-        working-directory: ./server
         env:
           # NestJS 앱 초기화에 필요한 최소한의 환경 변수 설정
           # 실제 DB에 연결하지 않으므로 값은 중요하지 않습니다.
@@ -45,14 +49,14 @@ jobs:
           JWT_EXPIRATION_TIME: "3600"
 
       - name: Prepare Swagger UI
-        # 현재 디렉토리에서 스크립트 실행
+        # working-directory가 defaults로 설정되었으므로 여기서는 제거합니다.
         run: npm run swagger:ui:prepare
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # 현재 디렉토리 내에 생성된 swagger-ui 폴더를 업로드
-          path: ./swagger-ui
+          # 아티팩트 경로는 checkout된 server 디렉토리 내부를 기준으로 합니다.
+          path: ./server/swagger-ui
 
   # GitHub Pages 배포 작업
   deploy:
