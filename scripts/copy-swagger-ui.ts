@@ -60,6 +60,31 @@ async function copySwaggerUI() {
     await fs.writeFile(indexPath, indexContent, 'utf8');
     console.log('수정된 index.html 파일을 저장했습니다.');
 
+    // swagger-initializer.js 파일도 수정합니다.
+    const initializerPath = path.join(targetPath, 'swagger-initializer.js');
+    console.log(`swagger-initializer.js 파일 경로: ${initializerPath}`);
+
+    if (await fs.pathExists(initializerPath)) {
+      let initializerContent = await fs.readFile(initializerPath, 'utf8');
+      console.log('swagger-initializer.js 파일을 읽었습니다.');
+
+      // Pet Store URL을 우리 swagger.json으로 변경합니다.
+      initializerContent = initializerContent.replace(
+        'https://petstore.swagger.io/v2/swagger.json',
+        './swagger.json'
+      );
+      // 다른 가능한 URL 패턴들도 확인합니다.
+      initializerContent = initializerContent.replace(
+        /url:\s*["']https:\/\/petstore\.swagger\.io\/v2\/swagger\.json["']/g,
+        'url: "./swagger.json"'
+      );
+
+      await fs.writeFile(initializerPath, initializerContent, 'utf8');
+      console.log('수정된 swagger-initializer.js 파일을 저장했습니다.');
+    } else {
+      console.log('swagger-initializer.js 파일이 존재하지 않습니다.');
+    }
+
     // swagger.json 파일을 swagger-ui 폴더로 복사합니다.
     await fs.copy(swaggerJsonPath, path.join(targetPath, 'swagger.json'));
     console.log('swagger.json 파일을 복사했습니다.');
