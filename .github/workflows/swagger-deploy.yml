@@ -2,7 +2,7 @@ name: Deploy Swagger UI to GitHub Pages
 
 on:
   push:
-    branches: [ dev, main ]
+    branches: [ dev, main, feat/swagger-action ]
   workflow_dispatch:
     inputs:
       environment:
