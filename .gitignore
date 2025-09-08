@@ -12,6 +12,10 @@ node_modules
 # NestJS 빌드 디렉토리
 /dist
 
+# Swagger 관련 (CI에서만 생성)
+/swagger-ui
+swagger.json
+
 # 테스트 관련
 /coverage
 
