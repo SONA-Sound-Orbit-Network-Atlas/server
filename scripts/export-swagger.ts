@@ -18,6 +18,6 @@ async function exportSwagger() {
 }
 
 exportSwagger().catch(err => {
-  console.error('Swagger export 실패:', err);
+  console.error('Swagger export 실패:', err.stack || err);
   process.exit(1);
 });
