@@ -17,7 +17,11 @@ async function exportSwagger() {
   await app.close();
 }
 
-exportSwagger().catch(err => {
+exportSwagger().catch((err) => {
   console.error('Swagger export 실패:', err.stack || err);
+  // NestJS 또는 HTTP 관련 오류일 경우, 상세 응답 내용을 출력합니다.
+  if (err.response) {
+    console.error('Error response:', JSON.stringify(err.response, null, 2));
+  }
   process.exit(1);
 });

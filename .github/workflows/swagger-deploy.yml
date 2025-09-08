@@ -34,8 +34,15 @@ jobs:
         run: npm install
 
       - name: Generate Swagger JSON
-        # 현재 디렉토리에서 스크립트 실행
+        # server 디렉토리에서 스크립트 실행
         run: npm run export:swagger
+        working-directory: ./server
+        env:
+          # NestJS 앱 초기화에 필요한 최소한의 환경 변수 설정
+          # 실제 DB에 연결하지 않으므로 값은 중요하지 않습니다.
+          DATABASE_URL: "postgresql://user:password@localhost:5432/db?schema=public"
+          JWT_SECRET: "temp-secret-for-ci"
+          JWT_EXPIRATION_TIME: "3600"
 
       - name: Prepare Swagger UI
         # 현재 디렉토리에서 스크립트 실행
