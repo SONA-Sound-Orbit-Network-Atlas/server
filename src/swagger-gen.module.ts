@@ -7,6 +7,7 @@ import * as path from 'path';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { FollowsModule } from './modules/follows/follows.module';
+import { StellarSystemModule } from './modules/stellar-systems/stellar-systems.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaService } from './prisma/prisma.service';
@@ -190,6 +191,7 @@ class MockPrismaService {
     AuthModule,
     UsersModule,
     FollowsModule,
+    StellarSystemModule,
   ],
   controllers: [AppController],
   providers: [
