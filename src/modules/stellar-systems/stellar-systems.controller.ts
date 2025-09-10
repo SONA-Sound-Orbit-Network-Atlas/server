@@ -14,7 +14,7 @@ import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @ApiTags('스텔라시스템 정보 관리')
-@Controller('stellar-system')
+@Controller('stellar-systems')
 export class StellarSystemController {
   constructor(private readonly stellarSystemService: StellarSystemService) {}
 

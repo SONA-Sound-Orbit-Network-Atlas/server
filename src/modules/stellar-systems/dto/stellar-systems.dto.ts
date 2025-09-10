@@ -1,4 +1,3 @@
-// src/modules/space/dto/compose.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
