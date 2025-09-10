@@ -31,6 +31,8 @@ model User {
   stellar_systems  StellarSystem[] @relation("SystemOwner")
   // 관계: 사용자가 원작자인 항성계들
   authored_systems StellarSystem[] @relation("OriginalAuthor")
+  // 관계: 사용자가 생성한(만든) 항성계들
+  created_systems  StellarSystem[] @relation("SystemCreator")
   // 관계: 좋아요한 항성계들
   likes            Like[]
   // 관계: 팔로우 (팔로워)
@@ -43,6 +45,12 @@ model User {
   @@map("users")
 }
 
+// 내부 클론만 지원: 생성 방식은 수동(MANUAL) 또는 클론(CLONE)
+enum CreationMethod {
+  MANUAL
+  CLONE
+}
+
 model Galaxy {
   id         String   @id @default(cuid())
   name       String
@@ -50,89 +58,108 @@ model Galaxy {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  // 관계: 갤럭시 소유자
-  owner           User            @relation(fields: [owner_id], references: [id], onDelete: Cascade)
-  // 관계: 갤럭시에 속한 항성계들
+  // 관계: 갤럭시 소유자 (1 User : N Galaxy)
+  // - Galaxy.owner_id -> User.id
+  // - 갤럭시가 삭제되면 해당 갤럭시 레코드만 삭제(Cascade는 Galaxy->User가 아니라 FK 소유측에만 의미)
+  owner User @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+
+  // 관계: 이 갤럭시에 속한 항성계들 (1 Galaxy : N StellarSystem)
+  // - StellarSystem.galaxy_id -> Galaxy.id
   stellar_systems StellarSystem[]
 
+  @@index([owner_id]) // 소유자 기준 갤럭시 조회 최적화
   @@map("galaxies")
 }
 
 model StellarSystem {
-  id                 String   @id @default(cuid())
+  id                 String  @id @default(cuid())
   galaxy_id          String
-  owner_id           String
-  original_author_id String? // 원작자 (클론인 경우)
-  source_system_id   String? // 원본 시스템 (클론인 경우)
-  title              String
-  bpm                Int      @default(120)
-  x                  Float    @default(0) // 초기 배치 좌표
-  y                  Float    @default(0)
-  z                  Float    @default(0)
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
+  owner_id           String // 현재 소유자 (변경 가능)
+  created_by_id      String // 최초 생성 실행자 (불변 권장)
+  original_author_id String? // 원작자 (클론 시 원본의 원작자/없으면 원본 생성자)
+  source_system_id   String? // 원본 시스템 (CLONE일 때 부모, MANUAL일 땐 null)
 
-  // 관계: 소속 갤럭시
-  galaxy          Galaxy          @relation(fields: [galaxy_id], references: [id], onDelete: Cascade)
-  // 관계: 시스템 소유자
-  owner           User            @relation(fields: [owner_id], references: [id], onDelete: Cascade, name: "SystemOwner")
-  // 관계: 원작자 (셀프 참조)
-  original_author User?           @relation(fields: [original_author_id], references: [id], name: "OriginalAuthor")
-  // 관계: 원본 시스템 (셀프 참조)
-  source_system   StellarSystem?  @relation(fields: [source_system_id], references: [id], name: "SourceSystem")
-  // 관계: 이 시스템을 복사한 시스템들
-  cloned_systems  StellarSystem[] @relation("SourceSystem")
-  // 관계: 시스템에 속한 행성들
-  planets         Planet[]
-  // 관계: 좋아요받은 수
-  likes           Like[]
+  title String
 
+  created_via CreationMethod @default(MANUAL) // MANUAL | CLONE
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+
+  // ───────────────────────────── 관계 설명 ─────────────────────────────
+  // (A) 시스템이 속한 갤럭시 (N:1)
+  // - FK: galaxy_id -> galaxies.id
+  // - 갤럭시 삭제 시 해당 시스템들도 함께 삭제(onDelete: Cascade)
+  galaxy Galaxy @relation(fields: [galaxy_id], references: [id], onDelete: Cascade)
+
+  // (B) 현재 소유자 (N:1, User와 다중 관계이므로 name으로 구분)
+  // - FK: owner_id -> users.id
+  owner User @relation(fields: [owner_id], references: [id], onDelete: Cascade, name: "SystemOwner")
+
+  // (C) 최초 생성자 (N:1)
+  // - FK: created_by_id -> users.id
+  created_by User @relation(fields: [created_by_id], references: [id], onDelete: Cascade, name: "SystemCreator")
+
+  // (D) 원작자(선택) (N:1)
+  // - FK: original_author_id -> users.id
+  // - 클론 시: 원본의 original_author_id가 있으면 승계, 없으면 원본의 created_by_id 사용
+  original_author User? @relation(fields: [original_author_id], references: [id], name: "OriginalAuthor")
+
+  // (E) 클론 계보 (Self-Reference)
+  // - 부모(원본) 시스템: source_system (N:1)
+  // - 자식(복제된) 시스템들: cloned_systems (1:N)
+  source_system  StellarSystem?  @relation(fields: [source_system_id], references: [id], name: "SourceSystem")
+  cloned_systems StellarSystem[] @relation("SourceSystem")
+
+  // (F) 이 시스템에 속한 플래닛들 (1:N)
+  // - Planet.system_id -> StellarSystem.id
+  planets Planet[]
+
+  // (G) 좋아요(선택) (1:N)
+  // - Like.system_id -> StellarSystem.id
+  // - Like 모델은 별도 정의 필요(복합 유니크로 user당 1번 제한)
+  likes Like[]
+  // 갤럭시 내 시스템명 중복 방지하고 싶으면 주석 해제:
+  // @@unique([galaxy_id, title])
+
+  @@index([galaxy_id])
+  @@index([owner_id])
+  @@index([created_by_id])
+  @@index([source_system_id])
   @@map("stellar_systems")
 }
 
 model Planet {
-  id                    String   @id @default(cuid())
-  system_id             String
-  name                  String
-  // 궤도 파라미터 (DB에 좌표 저장하지 않고 런타임 계산)
-  orbit_type            String   @default("circle") // 'circle' | 'ellipse'
-  orbit_radius          Float? // 원형 궤도의 반지름
-  orbit_a               Float? // 타원 궤도의 장축
-  orbit_b               Float? // 타원 궤도의 단축
-  orbit_rotation_deg    Float    @default(0) // 궤도 회전각
-  orbit_inclination_deg Float    @default(0) // 궤도 기울기
-  orbit_phase0          Float    @default(0) // 초기 위상
-  orbit_angular_speed   Float    @default(1) // 각속도
-  // 사운드 관련
-  instrument_type       String   @default("synth") // 악기 타입
-  params                Json     @default("{}") // 악기 파라미터 (JSON)
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
+  id        String @id @default(cuid())
+  system_id String // 소속 시스템 (N:1)
+  name      String
 
-  // 관계: 소속 항성계
-  system  StellarSystem @relation(fields: [system_id], references: [id], onDelete: Cascade)
-  // 관계: 행성의 패턴 (1:1)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // 관계: 소속 시스템 (N:1)
+  // - FK: system_id -> stellar_systems.id
+  // - 시스템 삭제 시 플래닛도 함께 삭제
+  system StellarSystem @relation(fields: [system_id], references: [id], onDelete: Cascade)
+
+  // 관계: 1:1 패턴 (Planet 기준 0..1)
+  // - Pattern.planet_id가 UNIQUE이므로 행성당 패턴은 최대 1개
   pattern Pattern?
 
+  @@index([system_id])
   @@map("planets")
 }
 
 model Pattern {
-  id                String   @id @default(cuid())
-  planet_id         String   @unique // 행성과 1:1 관계
-  steps_jsonb       Json     @default("[]") // [{i,n,v,g?}] 형태의 스텝 배열
-  length_steps      Int      @default(16) // 패턴 길이 (스텝 수)
-  resolution        String   @default("16n") // '8n'|'16n'|'32n'
-  source_pattern_id String? // 원본 패턴 (복사인 경우)
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  id        String @id @default(cuid())
+  planet_id String @unique // 행성과 1:1 관계 (UNIQUE로 강제)
 
-  // 관계: 소속 행성
-  planet          Planet    @relation(fields: [planet_id], references: [id], onDelete: Cascade)
-  // 관계: 원본 패턴 (셀프 참조)
-  source_pattern  Pattern?  @relation(fields: [source_pattern_id], references: [id], name: "SourcePattern")
-  // 관계: 이 패턴을 복사한 패턴들
-  copied_patterns Pattern[] @relation("SourcePattern")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // 관계: 소속 행성 (1:1의 반대편)
+  // - FK: planet_id -> planets.id
+  // - 행성 삭제 시 패턴도 함께 삭제
+  planet Planet @relation(fields: [planet_id], references: [id], onDelete: Cascade)
 
   @@map("patterns")
 }
@@ -150,7 +177,21 @@ model Like {
 
   // 유니크 제약: 한 사용자는 한 시스템에 하나의 좋아요만
   @@unique([user_id, system_id])
+  @@index([user_id])
+  @@index([system_id])
   @@map("likes")
+}
+
+model Option {
+  id         String   @id @default(cuid())
+  code       String   @unique // 'week' | 'month' | 'year' | 'random'
+  label      String // '이번 주' 등 UI용
+  sort       Int      @default(0) // 정렬
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("options")
 }
 
 model Follow {
