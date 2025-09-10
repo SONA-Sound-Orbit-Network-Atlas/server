@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ComposeRequestDto } from './dto/stellar-system.dto';
+import { ComposeRequestDto } from './dto/stellar-systems.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @Injectable()
@@ -151,7 +151,6 @@ export class StellarSystemService {
   }
 
   /**
-   * 특정 시스템 단건 조회
    * 내가 만든 시스템만 조회 가능 (created_by_id 기준)
    * 권한 없으면 403
    */
@@ -217,5 +216,106 @@ export class StellarSystemService {
       pagination: { total, page: currentPage, limit, totalPages },
     };
   }
-  
+
+  /*
+   *  단일 시스템 번들 조회
+   *  - system + system.planets(+pattern)
+   *  - galaxy 메타 + (옵션) galaxy.stellar_systems(+planets)
+   *  - 인증 필요 없음
+   */
+  async readOneCompose(systemId: string, includeGalaxySystems = false) {
+    // 1) 시스템 및 행성 조회 (패턴 포함 가능)
+    const system = await this.prisma.stellarSystem.findUnique({
+      where: { id: systemId },
+      include: {
+        planets: { orderBy: { created_at: 'desc' } },
+        // pattern까지 필요하면 ↓
+        // include: { pattern: true },
+      },
+    });
+    if (!system) throw new NotFoundException('시스템을 찾을 수 없습니다.');
+    // 2) 갤럭시 메타 조회
+    const galaxy = await this.prisma.galaxy.findUnique({
+      where: { id: system.galaxy_id },
+      select: {
+        id: true,
+        name: true,
+        owner_id: true,
+        created_at: true,
+        updated_at: true,
+        ...(includeGalaxySystems
+          ? {
+              stellar_systems: {
+                orderBy: { created_at: 'desc' },
+                include: { planets: { orderBy: { created_at: 'desc' } } },
+              },
+            }
+          : {}),
+      },
+    });
+    if (!galaxy) {
+      throw new NotFoundException('연결된 갤럭시를 찾을 수 없습니다.');
+    }
+    return { ...galaxy, stellar_system: system };
+  }
+
+  /*
+   *내가 만든 시스템 단일 조회
+   * - created_by_id 기준
+   * - 권한 없으면 403
+   * - system + planets(+pattern)
+   *   - galaxy 메타 + (옵션) galaxy.stellar_systems(+planets)
+   * - 인증 필요
+   */
+  async readMyOneCompose(
+    userId: string,
+    systemId: string,
+    includeGalaxySystems = false
+  ) {
+    // 1. 시스템 존재 및 소유 확인
+    this.checkSystemOwner({ userId, systemId });
+    // 2. 시스템 및 행성 조회 (패턴 포함 가능)
+    const system = await this.prisma.stellarSystem.findUnique({
+      where: { id: systemId },
+      include: {
+        planets: { orderBy: { created_at: 'desc' } },
+        // pattern까지 필요하면 ↓
+        // include: { pattern: true },
+      },
+    });
+    if (!system) throw new NotFoundException('시스템을 찾을 수 없습니다.');
+    // 3. 갤럭시 메타 조회
+    const galaxy = await this.prisma.galaxy.findUnique({
+      where: { id: system.galaxy_id },
+      select: {
+        id: true,
+        name: true,
+        owner_id: true,
+        created_at: true,
+        updated_at: true,
+        ...(includeGalaxySystems
+          ? {
+              stellar_systems: {
+                orderBy: { created_at: 'desc' },
+                include: { planets: { orderBy: { created_at: 'desc' } } },
+              },
+            }
+          : {}),
+      },
+    });
+    if (!galaxy) {
+      throw new NotFoundException('연결된 갤럭시를 찾을 수 없습니다.');
+    }
+    return { ...galaxy, stellar_system: system };
+  }
+
+  private async checkSystemOwner({
+    userId,
+    systemId,
+  }: {
+    userId: string;
+    systemId: string;
+  }) {
+    throw new Error('해당 기능을 지원하지 않습니다');
+  }
 }
