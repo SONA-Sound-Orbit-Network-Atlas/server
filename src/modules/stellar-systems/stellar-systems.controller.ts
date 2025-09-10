@@ -10,7 +10,7 @@ import {
 } from '@nestjs/swagger';
 import { ComposeRequestDto } from './dto/stellar-systems.dto';
 import { UseGuards, Post, Body } from '@nestjs/common';
-import { ErrorResponseDto } from 'src/common/dto/error-response.dto';
+import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @ApiTags('스텔라시스템 정보 관리')
