@@ -6,14 +6,23 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import { join, isAbsolute } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // CORS 설정 (프론트엔드와 연결을 위해)
+  // CORS 설정 (운영 도메인 환경변수로 동적 허용)
+  // FRONTEND_URL="http://a.com,http://b.com" 형태 지원
+  const frontendEnv = process.env.FRONTEND_URL || '';
+  const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173'];
+  const origins = frontendEnv
+    ? frontendEnv
+        .split(',')
+        .map(o => o.trim())
+        .filter(Boolean)
+    : defaultOrigins;
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:5173'], // React/Vite 개발 서버
+    origin: origins,
     credentials: true,
   });
 
@@ -37,13 +46,18 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  const root = process.env.UPLOAD_DIR || 'uploads';
-  await fs.mkdir(join(process.cwd(), root), { recursive: true });
+  // 업로드 루트 경로: 절대 경로면 그대로 사용, 아니면 CWD 기준으로 결합
+  const rootEnv = process.env.UPLOAD_DIR || '/data/uploads';
+  const uploadRoot = isAbsolute(rootEnv)
+    ? rootEnv
+    : join(process.cwd(), rootEnv);
+  await fs.mkdir(uploadRoot, { recursive: true });
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
   console.log(`🚀 SONA 서버가 http://localhost:${port} 에서 실행 중입니다.`);
+  console.log(`📦 Upload root: ${uploadRoot}`);
   console.log(`📖 API 문서: http://localhost:${port}/api`);
 }
 

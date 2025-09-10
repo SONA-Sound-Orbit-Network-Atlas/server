@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  sona-server:
+    image: sona/server:latest
+    container_name: sona-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - UPLOAD_DIR=/data/uploads
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "7005:3000"
+    volumes:
+      - sona_server_uploads:/data/uploads
+
+volumes:
+  sona_server_uploads:
+  sona_pg_data:
