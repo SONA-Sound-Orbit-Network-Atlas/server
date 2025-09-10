@@ -8,7 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaService } from './prisma/prisma.service';
 import { FollowsModule } from './modules/follows/follows.module';
-import { StellarSystemModule } from './modules/stellar-system/stellar-systems.module';
+import { StellarSystemModule } from './modules/stellar-systems/stellar-systems.module';
 
 /**
  * SONA 애플리케이션의 루트 모듈
