@@ -30,11 +30,9 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: ./server
         run: npm install
 
       - name: Generate Swagger JSON
-        working-directory: ./server
         run: npm run export:swagger
         env:
           DATABASE_URL: "postgresql://user:password@localhost:5432/db?schema=public"
@@ -42,13 +40,15 @@ jobs:
           JWT_EXPIRATION_TIME: "3600"
 
       - name: Prepare Swagger UI
-        working-directory: ./server
         run: npm run swagger:ui:prepare
+
+      - name: Copy Swagger UI to root
+        run: cp -r ./swagger-ui ./swagger-ui
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./server/swagger-ui
+          path: ./swagger-ui
 
   # GitHub Pages 배포 작업 (main, dev, feat/swagger-action  브랜치에서만 실행)
   deploy:
