@@ -169,4 +169,24 @@ export class StellarSystemController {
   async readCompose(@Query('system_id') systemId: string) {
     return this.stellarSystemService.readOneCompose(systemId, true);
   }
+
+  /**
+   * 내가 만든 스텔라 시스템수
+   */
+  @Get('me/count')
+  @ApiOperation({ summary: '내가 만든 항성계 수 조회' })
+  @ApiResponse({ status: 200, description: '성공' })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '존재하지 않음',
+    type: ErrorResponseDto,
+  })
+  async getMyStellarSystemCount(@User('id') userId: string) {
+    return this.getMyStellarSystemCount(userId);
+  }
 }
