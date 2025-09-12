@@ -174,6 +174,8 @@ export class StellarSystemController {
    * 내가 만든 스텔라 시스템수
    */
   @Get('me/count')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: '내가 만든 항성계 수 조회' })
   @ApiResponse({ status: 200, description: '성공' })
   @ApiResponse({
