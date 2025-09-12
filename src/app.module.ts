@@ -9,6 +9,7 @@ import { UsersModule } from './modules/users/users.module';
 import { PrismaService } from './prisma/prisma.service';
 import { FollowsModule } from './modules/follows/follows.module';
 import { StellarSystemModule } from './modules/stellar-systems/stellar-systems.module';
+import { LikesModule } from './modules/likes/likes.module';
 
 /**
  * SONA 애플리케이션의 루트 모듈
@@ -31,6 +32,7 @@ import { StellarSystemModule } from './modules/stellar-systems/stellar-systems.m
     UsersModule,
     FollowsModule,
     StellarSystemModule,
+    LikesModule,
     // TODO: 추후 추가될 모듈들
     // GalaxiesModule,
     // StellarSystemsModule,
