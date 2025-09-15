@@ -40,9 +40,10 @@ export class StellarSystemController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '스텔라 시스템 생성',
-    description: '새로운 스텔라 시스템을 생성합니다. 항성은 자동으로 생성되며 삭제할 수 없습니다.'
+    description:
+      '새로운 스텔라 시스템을 생성합니다. 항성은 자동으로 생성되며 삭제할 수 없습니다.',
   })
   @ApiResponse({ status: 201, description: '스텔라 시스템 생성 성공' })
   @ApiResponse({
@@ -52,7 +53,7 @@ export class StellarSystemController {
   })
   async createStellarSystem(
     @User('userId') userId: string,
-    @Body() createDto: CreateStellarSystemDto,
+    @Body() createDto: CreateStellarSystemDto
   ) {
     return this.stellarSystemService.createStellarSystem(userId, createDto);
   }
@@ -84,7 +85,7 @@ export class StellarSystemController {
   })
   async cloneStellarSystem(
     @User('userId') userId: string,
-    @Body() cloneDto: CloneStellarSystemDto,
+    @Body() cloneDto: CloneStellarSystemDto
   ) {
     return this.stellarSystemService.cloneStellarSystem(userId, cloneDto);
   }
@@ -100,7 +101,7 @@ export class StellarSystemController {
   @ApiResponse({ status: 404, description: '스텔라 시스템을 찾을 수 없음' })
   async getStellarSystem(
     @Param('id') id: string,
-    @User('userId') userId: string,
+    @User('userId') userId: string
   ) {
     return this.stellarSystemService.getStellarSystem(id, userId);
   }
@@ -117,7 +118,7 @@ export class StellarSystemController {
   async updateStellarSystem(
     @Param('id') id: string,
     @User('userId') userId: string,
-    @Body() updateDto: UpdateStellarSystemDto,
+    @Body() updateDto: UpdateStellarSystemDto
   ) {
     return this.stellarSystemService.updateStellarSystem(id, userId, updateDto);
   }
@@ -128,15 +129,16 @@ export class StellarSystemController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '스텔라 시스템 삭제',
-    description: '스텔라 시스템을 삭제합니다. 포함된 항성과 행성들도 함께 삭제됩니다.'
+    description:
+      '스텔라 시스템을 삭제합니다. 포함된 항성과 행성들도 함께 삭제됩니다.',
   })
   @ApiResponse({ status: 200, description: '삭제 성공' })
   @ApiResponse({ status: 404, description: '스텔라 시스템을 찾을 수 없음' })
   async deleteStellarSystem(
     @Param('id') id: string,
-    @User('userId') userId: string,
+    @User('userId') userId: string
   ) {
     return this.stellarSystemService.deleteStellarSystem(id, userId);
   }

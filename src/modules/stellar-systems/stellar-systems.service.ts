@@ -119,10 +119,12 @@ export class StellarSystemService {
     // object_type 필드 추가하여 반환
     return {
       ...system,
-      star: system.star ? {
-        ...system.star,
-        object_type: 'STAR' as const,
-      } : null,
+      star: system.star
+        ? {
+            ...system.star,
+            object_type: 'STAR' as const,
+          }
+        : null,
       planets: system.planets.map(planet => ({
         ...planet,
         object_type: 'PLANET' as const,
@@ -194,7 +196,7 @@ export class StellarSystemService {
       }
 
       // 3. 행성들 복제
-      const clonedPlanets = [];
+      const clonedPlanets: any[] = [];
       for (const planet of sourceSystem.planets) {
         const clonedPlanet = await tx.planet.create({
           data: {
@@ -220,13 +222,27 @@ export class StellarSystemService {
         created_via: clonedSystem.created_via,
         created_at: clonedSystem.created_at,
         updated_at: clonedSystem.updated_at,
-        star: clonedStar ? { 
-          ...clonedStar, 
-          object_type: 'STAR' as const 
-        } : null,
+        star: clonedStar
+          ? {
+              id: (clonedStar as any).id,
+              system_id: (clonedStar as any).system_id,
+              name: (clonedStar as any).name || 'CENTRAL STAR',
+              object_type: 'STAR' as const,
+              properties: (clonedStar as any).properties,
+              created_at: (clonedStar as any).created_at,
+              updated_at: (clonedStar as any).updated_at,
+            }
+          : null,
         planets: clonedPlanets.map(planet => ({
-          ...planet,
-          object_type: 'PLANET' as const
+          id: planet.id,
+          system_id: planet.system_id,
+          name: planet.name,
+          object_type: 'PLANET' as const,
+          instrument_role: planet.instrument_role,
+          is_active: planet.is_active,
+          properties: planet.properties,
+          created_at: planet.created_at,
+          updated_at: planet.updated_at,
         })),
       };
     });
@@ -361,7 +377,7 @@ export class StellarSystemService {
           systemId = createdSystem.id;
         } else {
           // 기존 시스템에 행성 추가
-          const existingSystem = await tx.stellar_system.findUnique({
+          const existingSystem = await tx.stellarSystem.findUnique({
             where: { id: systemId },
             select: { id: true, galaxy_id: true, owner_id: true },
           });
@@ -384,7 +400,7 @@ export class StellarSystemService {
                 data: {
                   system_id: systemId,
                   name: planetDto.name,
-                  planet_type: planetDto.planet_type || 'PLANET',
+                  object_type: planetDto.object_type || 'PLANET',
                   instrument_role: planetDto.instrument_role || null,
                   is_active: planetDto.is_active ?? true,
                   properties: planetDto.properties || {},
@@ -398,7 +414,7 @@ export class StellarSystemService {
       const result = await tx.galaxy.findUnique({
         where: { id: galaxyId! },
         include: {
-          owner: { select: { id: true, user_name: true } },
+          owner: { select: { id: true, username: true } },
           stellar_systems: {
             orderBy: { created_at: 'desc' },
             include: { planets: { orderBy: { created_at: 'desc' } } },

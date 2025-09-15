@@ -263,13 +263,13 @@ export class ComposePlanetDto {
   name!: string;
 
   @ApiPropertyOptional({
-    enum: PlanetType,
-    example: PlanetType.PLANET,
-    description: '행성 타입: CENTRAL_STAR(항성) 또는 PLANET(행성)',
+    enum: ObjectType,
+    example: ObjectType.PLANET,
+    description: '객체 타입: STAR(항성) 또는 PLANET(행성)',
   })
-  @IsEnum(PlanetType)
+  @IsEnum(ObjectType)
   @IsOptional()
-  planet_type?: PlanetType;
+  object_type?: ObjectType;
 
   @ApiPropertyOptional({
     enum: InstrumentRole,

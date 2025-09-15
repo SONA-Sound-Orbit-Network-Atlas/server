@@ -35,10 +35,6 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.client.planet;
   }
 
-  get pattern() {
-    return this.client.pattern;
-  }
-
   get like() {
     return this.client.like;
   }
