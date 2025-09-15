@@ -110,11 +110,15 @@ model StellarSystem {
   source_system  StellarSystem?  @relation(fields: [source_system_id], references: [id], name: "SourceSystem")
   cloned_systems StellarSystem[] @relation("SourceSystem")
 
-  // (F) 이 시스템에 속한 플래닛들 (1:N)
+  // (F) 중앙 항성 (1:1) - 새로 추가
+  // - Star.system_id -> StellarSystem.id
+  star Star?
+
+  // (G) 이 시스템에 속한 플래닛들 (1:N)
   // - Planet.system_id -> StellarSystem.id
   planets Planet[]
 
-  // (G) 좋아요(선택) (1:N)
+  // (H) 좋아요(선택) (1:N)
   // - Like.system_id -> StellarSystem.id
   // - Like 모델은 별도 정의 필요(복합 유니크로 user당 1번 제한)
   likes Like[]
@@ -128,40 +132,49 @@ model StellarSystem {
   @@map("stellar_systems")
 }
 
-model Planet {
-  id        String @id @default(cuid())
-  system_id String // 소속 시스템 (N:1)
-  name      String
-
+// 중앙 항성 모델 (새로 추가)
+model Star {
+  id         String   @id @default(cuid())
+  system_id  String   @unique // 1:1 관계 (한 시스템당 하나의 항성)
+  name       String   @default("CENTRAL STAR")
+  
+  // SONA 항성 전역 제어 속성들을 JSONB로 저장
+  // StarGlobalProperties: spin→BPM, brightness→Volume, color→Key/Scale, size→Complexity
+  properties Json?    @default("{}")
+  
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
+  // 관계: 소속 시스템 (1:1)
+  system StellarSystem @relation(fields: [system_id], references: [id], onDelete: Cascade)
+
+  @@map("stars")
+}
+
+model Planet {
+  id              String    @id @default(cuid())
+  system_id       String    // 소속 시스템 (N:1)
+  name            String
+  
+  // 행성 전용 필드 (planet_type 제거, CENTRAL_STAR는 Star 테이블로 분리)
+  instrument_role String    // 'DRUM' | 'BASS' | 'CHORD' | 'MELODY' | 'ARPEGGIO' | 'PAD'
+  is_active       Boolean   @default(true) // 활성화 상태
+  
+  // SONA 행성별 개별 속성들을 JSONB로 저장 (유연성과 확장성)
+  // PlanetProperties: 개별 악기의 음색, 리듬, 공간감 등 제어
+  properties Json?    @default("{}")
+  
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
 
   // 관계: 소속 시스템 (N:1)
   // - FK: system_id -> stellar_systems.id
   // - 시스템 삭제 시 플래닛도 함께 삭제
   system StellarSystem @relation(fields: [system_id], references: [id], onDelete: Cascade)
 
-  // 관계: 1:1 패턴 (Planet 기준 0..1)
-  // - Pattern.planet_id가 UNIQUE이므로 행성당 패턴은 최대 1개
-  pattern Pattern?
-
   @@index([system_id])
+  @@index([instrument_role]) // 악기 역할별 조회 최적화  
   @@map("planets")
-}
-
-model Pattern {
-  id        String @id @default(cuid())
-  planet_id String @unique // 행성과 1:1 관계 (UNIQUE로 강제)
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  // 관계: 소속 행성 (1:1의 반대편)
-  // - FK: planet_id -> planets.id
-  // - 행성 삭제 시 패턴도 함께 삭제
-  planet Planet @relation(fields: [planet_id], references: [id], onDelete: Cascade)
-
-  @@map("patterns")
 }
 
 model Like {

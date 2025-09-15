@@ -4,12 +4,274 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ComposeRequestDto } from './dto/stellar-systems.dto';
+import {
+  ComposeRequestDto,
+  CreateStellarSystemDto,
+  UpdateStellarSystemDto,
+  CloneStellarSystemDto,
+} from './dto/stellar-systems.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @Injectable()
 export class StellarSystemService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * 새로운 스텔라 시스템 생성 (항성 자동 생성 포함)
+   * - 스텔라 시스템과 항성이 동시에 생성됩니다
+   * - 항성은 삭제할 수 없으며, 시스템당 정확히 하나만 존재합니다
+   */
+  async createStellarSystem(userId: string, dto: CreateStellarSystemDto) {
+    // 갤럭시 존재 및 소유자 확인
+    const galaxy = await this.prisma.galaxy.findUnique({
+      where: { id: dto.galaxy_id },
+      select: { id: true, owner_id: true },
+    });
+
+    if (!galaxy) {
+      throw new NotFoundException('해당 갤럭시를 찾을 수 없습니다.');
+    }
+
+    if (galaxy.owner_id !== userId) {
+      throw new ForbiddenException('이 갤럭시에 대한 권한이 없습니다.');
+    }
+
+    return await this.prisma.$transaction(async tx => {
+      // 1. 스텔라 시스템 생성 (스키마의 모든 필수 필드 포함)
+      const system = await tx.stellarSystem.create({
+        data: {
+          title: dto.name,
+          galaxy_id: dto.galaxy_id,
+          owner_id: userId,
+          created_by_id: userId,
+          original_author_id: userId, // 새로 생성하는 경우 원작자도 동일
+          source_system_id: null, // 클론이 아닌 새 생성이므로 null
+          created_via: 'MANUAL',
+        },
+      });
+
+      // 2. 항성 자동 생성 (기본값 또는 사용자 제공값 사용)
+      const defaultStarProperties = {
+        spin: 50, // BPM 120
+        brightness: 75, // Volume 75%
+        color: 60, // Key/Scale
+        size: 50, // Complexity 2
+        temperature: 50,
+        luminosity: 50,
+        radius: 50,
+        ...dto.star_properties, // 사용자 제공 속성으로 덮어쓰기
+      };
+
+      const star = await tx.star.create({
+        data: {
+          system_id: system.id,
+          properties: defaultStarProperties,
+        },
+      });
+
+      // 3. 생성된 시스템과 항성 정보 반환
+      return {
+        id: system.id,
+        name: system.title, // 응답에서는 name으로 변환
+        galaxy_id: system.galaxy_id,
+        owner_id: system.owner_id,
+        created_by_id: system.created_by_id,
+        original_author_id: system.original_author_id,
+        source_system_id: system.source_system_id,
+        created_via: system.created_via,
+        created_at: system.created_at,
+        updated_at: system.updated_at,
+        star: {
+          id: star.id,
+          system_id: star.system_id,
+          properties: star.properties,
+          created_at: star.created_at,
+          updated_at: star.updated_at,
+        },
+        planets: [], // 초기에는 행성이 없음
+      };
+    });
+  }
+
+  /**
+   * 스텔라 시스템 조회 (항성 및 행성 포함)
+   */
+  async getStellarSystem(id: string, userId: string) {
+    const system = await this.prisma.stellarSystem.findUnique({
+      where: { id },
+      include: {
+        star: true,
+        planets: true,
+      },
+    });
+
+    if (!system) {
+      throw new NotFoundException('스텔라 시스템을 찾을 수 없습니다.');
+    }
+
+    // 소유자 확인 (필요시)
+    if (system.owner_id !== userId) {
+      throw new ForbiddenException('이 스텔라 시스템에 대한 권한이 없습니다.');
+    }
+
+    return system;
+  }
+
+  /**
+   * 스텔라 시스템 클론 (원본을 복제하여 새 시스템 생성)
+   * - 원본 시스템의 항성과 행성들을 모두 복제합니다
+   * - created_via: 'CLONE'으로 설정됩니다
+   * - original_author_id와 source_system_id가 설정됩니다
+   */
+  async cloneStellarSystem(userId: string, dto: CloneStellarSystemDto) {
+    // 원본 시스템 확인
+    const sourceSystem = await this.prisma.stellarSystem.findUnique({
+      where: { id: dto.source_system_id },
+      include: {
+        star: true,
+        planets: true,
+      },
+    });
+
+    if (!sourceSystem) {
+      throw new NotFoundException('복제할 원본 시스템을 찾을 수 없습니다.');
+    }
+
+    // 대상 갤럭시 존재 및 소유자 확인
+    const galaxy = await this.prisma.galaxy.findUnique({
+      where: { id: dto.galaxy_id },
+      select: { id: true, owner_id: true },
+    });
+
+    if (!galaxy) {
+      throw new NotFoundException('대상 갤럭시를 찾을 수 없습니다.');
+    }
+
+    if (galaxy.owner_id !== userId) {
+      throw new ForbiddenException('대상 갤럭시에 대한 권한이 없습니다.');
+    }
+
+    // 트랜잭션으로 시스템, 항성, 행성 모두 클론
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1. 새 스텔라 시스템 생성 (클론)
+      const clonedSystem = await tx.stellarSystem.create({
+        data: {
+          title: dto.name,
+          galaxy_id: dto.galaxy_id,
+          owner_id: userId,
+          created_by_id: userId,
+          // 원작자 승계: 원본의 original_author_id가 있으면 사용, 없으면 원본의 created_by_id 사용
+          original_author_id:
+            sourceSystem.original_author_id || sourceSystem.created_by_id,
+          source_system_id: dto.source_system_id,
+          created_via: 'CLONE',
+        },
+      });
+
+      // 2. 항성 복제
+      let clonedStar = null;
+      if (sourceSystem.star) {
+        clonedStar = await tx.star.create({
+          data: {
+            system_id: clonedSystem.id,
+            name: sourceSystem.star.name,
+            properties: sourceSystem.star.properties,
+          },
+        });
+      }
+
+      // 3. 행성들 복제
+      const clonedPlanets = [];
+      for (const planet of sourceSystem.planets) {
+        const clonedPlanet = await tx.planet.create({
+          data: {
+            system_id: clonedSystem.id,
+            name: planet.name,
+            instrument_role: planet.instrument_role,
+            is_active: planet.is_active,
+            properties: planet.properties,
+          },
+        });
+        clonedPlanets.push(clonedPlanet);
+      }
+
+      // 4. 복제된 시스템 정보 반환
+      return {
+        id: clonedSystem.id,
+        name: clonedSystem.title,
+        galaxy_id: clonedSystem.galaxy_id,
+        owner_id: clonedSystem.owner_id,
+        created_by_id: clonedSystem.created_by_id,
+        original_author_id: clonedSystem.original_author_id,
+        source_system_id: clonedSystem.source_system_id,
+        created_via: clonedSystem.created_via,
+        created_at: clonedSystem.created_at,
+        updated_at: clonedSystem.updated_at,
+        star: clonedStar,
+        planets: clonedPlanets,
+      };
+    });
+
+    return result;
+  }
+
+  /**
+   * 스텔라 시스템 수정 (기본 정보만, 항성/행성은 별도 메서드)
+   */
+  async updateStellarSystem(id: string, userId: string, dto: UpdateStellarSystemDto) {
+    // 소유자 확인
+    const system = await this.prisma.stellarSystem.findUnique({
+      where: { id },
+      select: { id: true, owner_id: true },
+    });
+
+    if (!system) {
+      throw new NotFoundException('스텔라 시스템을 찾을 수 없습니다.');
+    }
+
+    if (system.owner_id !== userId) {
+      throw new ForbiddenException('이 스텔라 시스템에 대한 권한이 없습니다.');
+    }
+
+    // 업데이트 실행 (Prisma 스키마의 실제 필드명 사용)
+    return this.prisma.stellarSystem.update({
+      where: { id },
+      data: {
+        title: dto.name, // name → title 매핑
+        // description 필드가 스키마에 없으므로 제거
+      },
+      include: {
+        star: true,
+        planets: true,
+      },
+    });
+  }
+
+  /**
+   * 스텔라 시스템 삭제 (항성도 함께 자동 삭제)
+   */
+  async deleteStellarSystem(id: string, userId: string) {
+    // 소유자 확인
+    const system = await this.prisma.stellarSystem.findUnique({
+      where: { id },
+      select: { id: true, owner_id: true },
+    });
+
+    if (!system) {
+      throw new NotFoundException('스텔라 시스템을 찾을 수 없습니다.');
+    }
+
+    if (system.owner_id !== userId) {
+      throw new ForbiddenException('이 스텔라 시스템에 대한 권한이 없습니다.');
+    }
+
+    // 삭제 (Star, Planet은 외래키 제약으로 연쇄 삭제됨)
+    return this.prisma.stellarSystem.delete({
+      where: { id },
+    });
+  }
+
+  // === 기존 compose 메서드 (레거시 호환성) ===
   /**
    * 하나의 트랜잭션으로:
    *  - 새 Galaxy 생성 or 기존 Galaxy 사용
@@ -51,7 +313,7 @@ export class StellarSystemService {
 
         if (!systemId) {
           // 새 시스템 생성
-          const createdSystem = await tx.stellar_system.create({
+          const createdSystem = await tx.stellarSystem.create({
             data: {
               galaxy_id: galaxyId!,
               title: systemDto.title!, // DTO 검증으로 보장
@@ -60,14 +322,16 @@ export class StellarSystemService {
               original_author_id: userId,
               created_via: 'MANUAL',
               planets: systemDto.planets?.length
-                ? { create: systemDto.planets.map(p => ({ name: p.name })) }
+                ? { 
+                    create: systemDto.planets.map(p => ({
+                      name: p.name,
+                      planet_type: p.planet_type || 'PLANET',
+                      instrument_role: p.instrument_role || null,
+                      is_active: p.is_active ?? true,
+                      properties: p.properties || {},
+                    })),
+                  }
                 : undefined,
-              /** 
-                 *  with patterns 저장 
-                patterns: systemDto.patterns?.length // patterns가 배열로 들어온다고 가정
-                ? { create: systemDto.patterns.map(pt => ({ ...pt })) }
-                : undefined,
-                */
             },
             select: { id: true },
           });
@@ -94,7 +358,14 @@ export class StellarSystemService {
           if (systemDto.planets?.length) {
             for (const planetDto of systemDto.planets) {
               await tx.planet.create({
-                data: { system_id: systemId, name: planetDto.name },
+                data: { 
+                  system_id: systemId, 
+                  name: planetDto.name,
+                  planet_type: planetDto.planet_type || 'PLANET',
+                  instrument_role: planetDto.instrument_role || null,
+                  is_active: planetDto.is_active ?? true,
+                  properties: planetDto.properties || {},
+                },
               });
             }
           }
