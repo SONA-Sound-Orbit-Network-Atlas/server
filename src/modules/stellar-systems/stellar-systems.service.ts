@@ -84,6 +84,7 @@ export class StellarSystemService {
         star: {
           id: star.id,
           system_id: star.system_id,
+          name: star.name,
           object_type: 'STAR' as const,
           properties: star.properties,
           created_at: star.created_at,
