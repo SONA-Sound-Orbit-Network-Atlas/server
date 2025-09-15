@@ -70,7 +70,7 @@ export class StellarSystemController {
    * - 패턴 포함 여부 선택 가능
    * - 인증 필요
    */
-  @Get('my-compose')
+  @Get('me/compose')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '내가 만든 항성계 목록 조회' })
@@ -104,7 +104,7 @@ export class StellarSystemController {
    *  - 권한 없으면 403
    * - 존재하지 않으면 404
    */
-  @Get('my-compose/:system_id')
+  @Get('me/compose/:systemId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '내가 만든 항성계 상세 조회' })
@@ -143,7 +143,7 @@ export class StellarSystemController {
    *  - 권한 없으면 403
    * - 존재하지 않으면 404
    */
-  @Get('compose/:system_id')
+  @Get('compose/:systemId')
   @ApiOperation({ summary: '상대방이 만든 항성계 상세 조회' })
   @ApiResponse({ status: 200, description: '성공' })
   @ApiResponse({
@@ -166,7 +166,7 @@ export class StellarSystemController {
     description: '존재하지 않음',
     type: ErrorResponseDto,
   })
-  async readCompose(@Query('system_id') systemId: string) {
+  async readCompose(@Query('systemId') systemId: string) {
     return this.stellarSystemService.readOneCompose(systemId, true);
   }
 
@@ -189,6 +189,6 @@ export class StellarSystemController {
     type: ErrorResponseDto,
   })
   async getMyStellarSystemCount(@User('id') userId: string) {
-    return this.getMyStellarSystemCount(userId);
+    return this.stellarSystemService.countMyStellaSystem(userId);
   }
 }

@@ -24,7 +24,6 @@ export class AuthService {
   /**
    * 회원 가입
    **/
-
   async create(
     createUserDto: CreateUserDto
   ): Promise<{ message: string; user: AuthenticatedUser }> {
@@ -107,6 +106,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
+        about: user.about,
         username: user.username,
         created_at: user.created_at,
         updated_at: user.updated_at,

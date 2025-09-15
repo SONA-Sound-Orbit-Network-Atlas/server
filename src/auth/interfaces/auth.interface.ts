@@ -7,6 +7,7 @@ export interface User extends BaseEntity {
   email: string;
   username: string;
   password: string;
+  about?: string | null;
 }
 
 /**

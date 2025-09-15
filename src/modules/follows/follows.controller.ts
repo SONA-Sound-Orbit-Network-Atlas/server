@@ -96,7 +96,7 @@ export class FollowsController {
   /*
    * 본인 팔로우 팔로어 통계
    */
-  @Get('me/stats')
+  @Get('me/count')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '팔로우 팔로어 통계' })
@@ -118,7 +118,7 @@ export class FollowsController {
   /*
    * 특정 사용자 팔로우 팔로어 통계
    */
-  @Get(':userId/stats')
+  @Get(':userId/count')
   @ApiOperation({ summary: '특정 사용자 팔로우 팔로어 통계' })
   @ApiResponse({ status: 200, description: '성공' })
   @ApiResponse({
