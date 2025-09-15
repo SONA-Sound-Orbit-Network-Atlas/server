@@ -322,7 +322,7 @@ export class StellarSystemService {
   /**
    * 내가 작성한 스텔라 카운트
    */
-  async countStellaSystem(userId: string): Promise<number> {
+  async countMyStellaSystem(userId: string): Promise<number> {
     return this.prisma.stellarSystem.count({
       where: { owner_id: userId },
     });

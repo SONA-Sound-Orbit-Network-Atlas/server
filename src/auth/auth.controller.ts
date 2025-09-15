@@ -52,11 +52,7 @@ export class AuthController {
   async register(
     @Body() body: CreateUserDto
   ): Promise<{ message: string; user: AuthenticatedUser }> {
-    try {
-      return await this.authService.create(body);
-    } catch (error) {
-      throw new UnauthorizedException(error.message);
-    }
+    return await this.authService.create(body);
   }
 
   /**
