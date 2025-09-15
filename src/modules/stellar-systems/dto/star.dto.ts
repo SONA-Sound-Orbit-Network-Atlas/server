@@ -11,6 +11,12 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+// ObjectType enum 정의
+export enum ObjectType {
+  STAR = 'STAR',
+  PLANET = 'PLANET',
+}
+
 // 항성 속성 DTO (JSONB로 저장)
 export class StarPropertiesDto {
   @ApiProperty({
@@ -22,7 +28,8 @@ export class StarPropertiesDto {
   spin: number;
 
   @ApiProperty({
-    description: '항성 밝기 (전체 볼륨 결정)',
+    description:
+      '항성 밝기 (전체 음색 특성 결정 - 어두우면 따뜻하고 부드러운 톤, 밝으면 선명하고 날카로운 톤)',
     minimum: 0,
     maximum: 100,
     example: 75,
@@ -79,7 +86,8 @@ export class CreateStarDto {
   system_id: string;
 
   @ApiProperty({
-    description: '항성의 기본 속성 데이터 (JSONB) - 시스템 생성 시 기본값으로 설정',
+    description:
+      '항성의 기본 속성 데이터 (JSONB) - 시스템 생성 시 기본값으로 설정',
     type: StarPropertiesDto,
   })
   @IsObject()
@@ -108,6 +116,13 @@ export class StarResponseDto {
 
   @ApiProperty({ description: '스텔라 시스템 ID' })
   system_id: string;
+
+  @ApiProperty({
+    description: '객체 타입 (항성은 항상 STAR)',
+    enum: ObjectType,
+    example: ObjectType.STAR,
+  })
+  object_type: ObjectType;
 
   @ApiProperty({
     description: '항성 속성',

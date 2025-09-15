@@ -16,8 +16,8 @@ import { Type } from 'class-transformer';
 import { StarPropertiesDto } from './star.dto';
 
 // 오디오 관련 타입 정의
-export enum PlanetType {
-  CENTRAL_STAR = 'CENTRAL_STAR',
+export enum ObjectType {
+  STAR = 'STAR',
   PLANET = 'PLANET',
 }
 
@@ -112,6 +112,88 @@ export class CreatePlanetDto {
   @IsOptional()
   @IsObject()
   properties?: any;
+}
+
+// 행성 수정 DTO
+export class UpdatePlanetDto {
+  @ApiPropertyOptional({
+    description: '행성 이름',
+    example: 'Updated Planet Name',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  name?: string;
+
+  @ApiPropertyOptional({
+    description: '악기 역할',
+    enum: InstrumentRole,
+    example: InstrumentRole.MELODY,
+  })
+  @IsOptional()
+  @IsEnum(InstrumentRole)
+  role?: InstrumentRole;
+
+  @ApiPropertyOptional({
+    description: '행성의 속성들 (부분 수정 가능)',
+    example: {
+      planetSize: 0.6,
+      planetColor: 200,
+    },
+  })
+  @IsOptional()
+  @IsObject()
+  properties?: any;
+}
+
+// 행성 응답 DTO
+export class PlanetResponseDto {
+  @ApiProperty({ description: '행성 ID' })
+  id: string;
+
+  @ApiProperty({ description: '스텔라 시스템 ID' })
+  system_id: string;
+
+  @ApiProperty({ description: '행성 이름' })
+  name: string;
+
+  @ApiProperty({
+    description: '객체 타입 (행성은 항상 PLANET)',
+    enum: ObjectType,
+    example: ObjectType.PLANET,
+  })
+  object_type: ObjectType;
+
+  @ApiProperty({
+    description: '악기 역할',
+    enum: InstrumentRole,
+    example: InstrumentRole.DRUM,
+  })
+  role: InstrumentRole;
+
+  @ApiProperty({
+    description: '행성 속성',
+    example: {
+      planetSize: 0.5,
+      planetColor: 180,
+      planetBrightness: 2.65,
+      distanceFromStar: 10.5,
+      orbitSpeed: 0.5,
+      rotationSpeed: 0.5,
+      eccentricity: 0.45,
+      tilt: 90.0,
+    },
+  })
+  properties: any;
+
+  @ApiProperty({ description: '활성화 상태' })
+  is_active: boolean;
+
+  @ApiProperty({ description: '생성 시간' })
+  created_at: Date;
+
+  @ApiProperty({ description: '수정 시간' })
+  updated_at: Date;
 }
 
 // 스텔라 시스템 수정 DTO

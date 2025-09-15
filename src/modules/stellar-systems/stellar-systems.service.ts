@@ -84,6 +84,7 @@ export class StellarSystemService {
         star: {
           id: star.id,
           system_id: star.system_id,
+          object_type: 'STAR' as const,
           properties: star.properties,
           created_at: star.created_at,
           updated_at: star.updated_at,
@@ -114,7 +115,18 @@ export class StellarSystemService {
       throw new ForbiddenException('이 스텔라 시스템에 대한 권한이 없습니다.');
     }
 
-    return system;
+    // object_type 필드 추가하여 반환
+    return {
+      ...system,
+      star: system.star ? {
+        ...system.star,
+        object_type: 'STAR' as const,
+      } : null,
+      planets: system.planets.map(planet => ({
+        ...planet,
+        object_type: 'PLANET' as const,
+      })),
+    };
   }
 
   /**
@@ -152,7 +164,7 @@ export class StellarSystemService {
     }
 
     // 트랜잭션으로 시스템, 항성, 행성 모두 클론
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async tx => {
       // 1. 새 스텔라 시스템 생성 (클론)
       const clonedSystem = await tx.stellarSystem.create({
         data: {
@@ -207,8 +219,14 @@ export class StellarSystemService {
         created_via: clonedSystem.created_via,
         created_at: clonedSystem.created_at,
         updated_at: clonedSystem.updated_at,
-        star: clonedStar,
-        planets: clonedPlanets,
+        star: clonedStar ? { 
+          ...clonedStar, 
+          object_type: 'STAR' as const 
+        } : null,
+        planets: clonedPlanets.map(planet => ({
+          ...planet,
+          object_type: 'PLANET' as const
+        })),
       };
     });
 
@@ -218,7 +236,11 @@ export class StellarSystemService {
   /**
    * 스텔라 시스템 수정 (기본 정보만, 항성/행성은 별도 메서드)
    */
-  async updateStellarSystem(id: string, userId: string, dto: UpdateStellarSystemDto) {
+  async updateStellarSystem(
+    id: string,
+    userId: string,
+    dto: UpdateStellarSystemDto
+  ) {
     // 소유자 확인
     const system = await this.prisma.stellarSystem.findUnique({
       where: { id },
@@ -322,7 +344,7 @@ export class StellarSystemService {
               original_author_id: userId,
               created_via: 'MANUAL',
               planets: systemDto.planets?.length
-                ? { 
+                ? {
                     create: systemDto.planets.map(p => ({
                       name: p.name,
                       planet_type: p.planet_type || 'PLANET',
@@ -358,8 +380,8 @@ export class StellarSystemService {
           if (systemDto.planets?.length) {
             for (const planetDto of systemDto.planets) {
               await tx.planet.create({
-                data: { 
-                  system_id: systemId, 
+                data: {
+                  system_id: systemId,
                   name: planetDto.name,
                   planet_type: planetDto.planet_type || 'PLANET',
                   instrument_role: planetDto.instrument_role || null,

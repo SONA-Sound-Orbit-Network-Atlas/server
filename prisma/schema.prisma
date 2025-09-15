@@ -51,6 +51,12 @@ enum CreationMethod {
   CLONE
 }
 
+// 객체 타입 구분 (항성/행성)
+enum ObjectType {
+  STAR
+  PLANET
+}
+
 model Galaxy {
   id         String   @id @default(cuid())
   name       String
@@ -134,9 +140,10 @@ model StellarSystem {
 
 // 중앙 항성 모델 (새로 추가)
 model Star {
-  id         String   @id @default(cuid())
-  system_id  String   @unique // 1:1 관계 (한 시스템당 하나의 항성)
-  name       String   @default("CENTRAL STAR")
+  id          String     @id @default(cuid())
+  system_id   String     @unique // 1:1 관계 (한 시스템당 하나의 항성)
+  name        String     @default("CENTRAL STAR")
+  object_type ObjectType @default(STAR) // 객체 타입 (항상 STAR)
   
   // SONA 항성 전역 제어 속성들을 JSONB로 저장
   // StarGlobalProperties: spin→BPM, brightness→Volume, color→Key/Scale, size→Complexity
@@ -152,9 +159,10 @@ model Star {
 }
 
 model Planet {
-  id              String    @id @default(cuid())
-  system_id       String    // 소속 시스템 (N:1)
+  id              String     @id @default(cuid())
+  system_id       String     // 소속 시스템 (N:1)
   name            String
+  object_type     ObjectType @default(PLANET) // 객체 타입 (항상 PLANET)
   
   // 행성 전용 필드 (planet_type 제거, CENTRAL_STAR는 Star 테이블로 분리)
   instrument_role String    // 'DRUM' | 'BASS' | 'CHORD' | 'MELODY' | 'ARPEGGIO' | 'PAD'
