@@ -347,7 +347,7 @@ export class StellarSystemService {
                 ? {
                     create: systemDto.planets.map(p => ({
                       name: p.name,
-                      planet_type: p.planet_type || 'PLANET',
+                      object_type: 'PLANET',
                       instrument_role: p.instrument_role || null,
                       is_active: p.is_active ?? true,
                       properties: p.properties || {},
