@@ -5,6 +5,17 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { buildPaginationMeta } from '../../common/utils/pagination.util';
+
+type FollowUserSummary = {
+  id: string;
+  username: string;
+  email: string;
+  about: string;
+  created_at: Date;
+  isMutual: boolean;
+};
+
 
 @Injectable()
 export class FollowsService {
@@ -18,7 +29,6 @@ export class FollowsService {
     if (currentUserId === targetUserId) {
       throw new BadRequestException('자기 자신을 팔로우할 수 없습니다.');
     }
-    console.log('Creating follow: ', currentUserId, '->', targetUserId);
 
     //중복 여부 확인 (이미 팔로우 중인지)
     const existsingFollow = await this.prisma.follow.findUnique({
@@ -41,7 +51,6 @@ export class FollowsService {
       },
     });
 
-    console.log('Follow created: ', currentUserId, '->', targetUserId);
     // 통계 리턴해주면 프론트에서 바로 갱신
     return this.getStats(targetUserId);
   }
@@ -73,78 +82,104 @@ export class FollowsService {
    * 팔로워 목록 (나를 팔로우하는 사람들)
    * - followee_id = userId
    */
-  async getFollowers(userId: string, { page = 1, limit = 20 }: PaginationDto) {
+  async getFollowers(userId: string, pagenationDto: PaginationDto) {
+    const page = Math.max(1, Number(pagenationDto.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(pagenationDto.limit) || 20));
     const skip = (page - 1) * limit;
-    const total = await this.prisma.$transaction([
-      this.prisma.follow.count({ where: { followee_id: userId } }),
+
+    const [followers, myFollowings] = await this.prisma.$transaction([
       this.prisma.follow.findMany({
         where: { followee_id: userId },
         skip,
-        orderBy: { created_at: 'desc' },
         take: limit,
+        orderBy: { created_at: 'desc' },
         include: {
           follower: {
             select: {
               id: true,
               username: true,
               email: true,
+              about: true,
               created_at: true,
             },
           },
         },
       }),
+      // 내가 팔로우한 대상들(id) → 맞팔 판단용
+      this.prisma.follow.findMany({
+        where: { follower_id: userId },
+        select: { followee_id: true },
+      }),
     ]);
 
-    const items = total[1].map(follow => follow.follower);
-    return { total, page, limit, items };
+    const myFollowingSet = new Set(myFollowings.map(f => f.followee_id));
+
+    const items: FollowUserSummary[] = followers.map(f => ({
+      ...f.follower,
+      isMutual: myFollowingSet.has(f.follower.id),
+    }));
+
+    const total = await this.prisma.follow.count({
+      where: { followee_id: userId },
+    });
+
+    return {
+      meta: buildPaginationMeta(total, pagenationDto),
+      items,
+    };
   }
 
   /*
    * 팔로잉 목록 (내가 팔로우하는 사람들)
    * - follower_id = userId
    */
-  async getFollowings(userId: string, { page = 1, limit = 20 }: PaginationDto) {
+  async getFollowings(userId: string, pagenationDto: PaginationDto) {
+    const page = Math.max(1, Number(pagenationDto.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(pagenationDto.limit) || 20));
     const skip = (page - 1) * limit;
-    const total = await this.prisma.$transaction([
-      this.prisma.follow.count({ where: { follower_id: userId } }),
+
+    const [followings, followersOfMe] = await this.prisma.$transaction([
       this.prisma.follow.findMany({
         where: { follower_id: userId },
         skip,
-        orderBy: { created_at: 'desc' },
         take: limit,
+        orderBy: { created_at: 'desc' },
         include: {
           followee: {
             select: {
               id: true,
               username: true,
               email: true,
+              about: true,
               created_at: true,
             },
           },
         },
       }),
+      // 내가 팔로우 하는 사람들 (id) -> 맞팔 판단용
+      this.prisma.follow.findMany({
+        where: { followee_id: userId },
+        select: { follower_id: true },
+      }),
     ]);
 
-    const items = total[1].map(follow => follow.followee);
-    return { total, page, limit, items };
-  }
+    const followersOfMeSet = new Set(followersOfMe.map(f => f.follower_id));
 
-  /*
-   * 팔로우 여부 확인: current -> target
-   */
-  async isFollowing(currentUserId: string, targetUserId: string) {
-    const found = await this.prisma.follow.findUnique({
-      where: {
-        follower_id_followee_id: {
-          follower_id: currentUserId,
-          followee_id: targetUserId,
-        },
-      },
-      select: { follower_id: true },
+    const items: FollowUserSummary[] = followings.map(f => ({
+      ...f.followee,
+      isMutual: followersOfMeSet.has(f.followee.id),
+    }));
+
+    const total = await this.prisma.follow.count({
+      where: { follower_id: userId },
     });
-    return { isFollowing: !!found };
-  }
 
+    return {
+      meta: buildPaginationMeta(total, pagenationDto),
+      items,
+    };
+  }
+  
   /*
    * 특정 유저의 팔로워/팔로잉 수 통계
    */
