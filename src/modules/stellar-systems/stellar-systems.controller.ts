@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Query,
   Post,
   Body,
   Put,
@@ -19,13 +18,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
-  ComposeRequestDto,
   CreateStellarSystemDto,
   UpdateStellarSystemDto,
   CloneStellarSystemDto,
-} from './dto/stellar-systems.dto';
+  StellarSystemResponseDto,
+} from './dto/stellar-system.dto';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
-import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @ApiTags('스텔라시스템 정보 관리')
 @Controller('stellar-systems')
@@ -45,10 +43,24 @@ export class StellarSystemController {
     description:
       '새로운 스텔라 시스템을 생성합니다. 항성은 자동으로 생성되며 삭제할 수 없습니다.',
   })
-  @ApiResponse({ status: 201, description: '스텔라 시스템 생성 성공' })
+  @ApiResponse({
+    status: 201,
+    description: '스텔라 시스템 생성 성공',
+    type: StellarSystemResponseDto,
+  })
   @ApiResponse({
     status: 400,
     description: '잘못된 요청',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '갤럭시를 찾을 수 없음',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 403,
+    description: '갤럭시에 대한 권한 없음',
     type: ErrorResponseDto,
   })
   async createStellarSystem(
@@ -72,7 +84,11 @@ export class StellarSystemController {
     description:
       '기존 스텔라 시스템을 복제하여 새로운 시스템을 생성합니다. 항성과 행성들이 모두 복제됩니다.',
   })
-  @ApiResponse({ status: 201, description: '스텔라 시스템 클론 성공' })
+  @ApiResponse({
+    status: 201,
+    description: '스텔라 시스템 클론 성공',
+    type: StellarSystemResponseDto,
+  })
   @ApiResponse({
     status: 400,
     description: '잘못된 요청',
@@ -81,6 +97,11 @@ export class StellarSystemController {
   @ApiResponse({
     status: 404,
     description: '원본 시스템을 찾을 수 없음',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 403,
+    description: '갤럭시에 대한 권한 없음',
     type: ErrorResponseDto,
   })
   async cloneStellarSystem(
@@ -96,9 +117,22 @@ export class StellarSystemController {
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '스텔라 시스템 조회' })
-  @ApiResponse({ status: 200, description: '조회 성공' })
-  @ApiResponse({ status: 404, description: '스텔라 시스템을 찾을 수 없음' })
+  @ApiOperation({ summary: '스텔라 시스템 조회 (항성 및 행성 포함)' })
+  @ApiResponse({
+    status: 200,
+    description: '조회 성공',
+    type: StellarSystemResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '스텔라 시스템을 찾을 수 없음',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 403,
+    description: '시스템에 대한 권한 없음',
+    type: ErrorResponseDto,
+  })
   async getStellarSystem(
     @Param('id') id: string,
     @User('userId') userId: string
@@ -141,158 +175,6 @@ export class StellarSystemController {
     @User('userId') userId: string
   ) {
     return this.stellarSystemService.deleteStellarSystem(id, userId);
-  }
-
-  /**
-   * 은하계, 항성계, 행성을 한 번에 생성 또는 연결
-   * - 인증 필요
-   * - 트랜잭션 처리
-   */
-  @Post('compose')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: '은하계/항성계/행성 생성 또는 연결' })
-  @ApiResponse({ status: 201, description: '성공' })
-  @ApiResponse({
-    status: 400,
-    description: '잘못된 요청',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: '인증 실패',
-    type: ErrorResponseDto,
-  })
-  async compose(
-    @User('id') userId: string,
-    @Body() composeRequestDto: ComposeRequestDto
-  ) {
-    return this.stellarSystemService.compose(userId, composeRequestDto);
-  }
-
-  /**
-   * - 전체 상태 조회
-   * - 패턴 포함 여부 선택 가능
-   */
-  @Get('compose')
-  @ApiOperation({ summary: '은하계의 모든 항성계 및 행성 조회' })
-  @ApiResponse({ status: 200, description: '성공' })
-  @ApiResponse({
-    status: 400,
-    description: '잘못된 요청',
-    type: ErrorResponseDto,
-  })
-  async readAllCompose(
-    @Query('galaxy_id') galaxyId: string,
-    @Query() paginationDto: PaginationDto
-  ) {
-    return this.stellarSystemService.readAllCompose(galaxyId, paginationDto);
-  }
-
-  /**
-   * - 내가 만든 항성계 목록 조회
-   * - pagination
-   * - 패턴 포함 여부 선택 가능
-   * - 인증 필요
-   */
-  @Get('me/compose')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: '내가 만든 항성계 목록 조회' })
-  @ApiResponse({ status: 200, description: '성공' })
-  @ApiResponse({
-    status: 400,
-    description: '잘못된 요청',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: '인증 실패',
-    type: ErrorResponseDto,
-  })
-  async readMyAllCompose(
-    @User('id') userId: string,
-    @Query('galaxy_id') galaxyId: string,
-    @Query() paginationDto: PaginationDto
-  ) {
-    return this.stellarSystemService.readMyAllCompose(
-      userId,
-      galaxyId,
-      paginationDto
-    );
-  }
-
-  /**
-   * - 내가 만든 항성계 상세 조회
-   * - 패턴 포함 여부 선택 가능
-   * - 인증 필요
-   *  - 권한 없으면 403
-   * - 존재하지 않으면 404
-   */
-  @Get('me/compose/:systemId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: '내가 만든 항성계 상세 조회' })
-  @ApiResponse({ status: 200, description: '성공' })
-  @ApiResponse({
-    status: 400,
-    description: '잘못된 요청',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: '인증 실패',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: '권한 없음',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: '존재하지 않음',
-    type: ErrorResponseDto,
-  })
-  async readMyCompose(
-    @User('id') userId: string,
-    @Query('system_id') systemId: string
-  ) {
-    return this.stellarSystemService.readMyOneCompose(userId, systemId);
-  }
-
-  /**
-   * - 상대방이 만든 항성계 상세 조회
-   * - 패턴 포함 여부 선택 가능
-   * - 인증 필요
-   *  - 권한 없으면 403
-   * - 존재하지 않으면 404
-   */
-  @Get('compose/:systemId')
-  @ApiOperation({ summary: '상대방이 만든 항성계 상세 조회' })
-  @ApiResponse({ status: 200, description: '성공' })
-  @ApiResponse({
-    status: 400,
-    description: '잘못된 요청',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: '인증 실패',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 403,
-    description: '권한 없음',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: '존재하지 않음',
-    type: ErrorResponseDto,
-  })
-  async readCompose(@Query('systemId') systemId: string) {
-    return this.stellarSystemService.readOneCompose(systemId, true);
   }
 
   /**
