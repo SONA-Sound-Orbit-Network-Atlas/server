@@ -11,16 +11,11 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-// ObjectType enum 정의
-export enum ObjectType {
-  STAR = 'STAR',
-  PLANET = 'PLANET',
-}
-
 // 항성 속성 DTO (JSONB로 저장)
+// SONA 전역 오디오 제어 파라미터들 (프론트엔드 StarProperties와 일치)
 export class StarPropertiesDto {
   @ApiProperty({
-    description: '항성 자전 속도 (전체 BPM 결정)',
+    description: '항성 자전 속도 (전체 BPM 결정: 60-180 BPM)',
     minimum: 0,
     maximum: 100,
     example: 50,
@@ -37,7 +32,7 @@ export class StarPropertiesDto {
   brightness: number;
 
   @ApiProperty({
-    description: '항성 색상 (Key/Scale 결정)',
+    description: '항성 색상 (Key/Scale 결정: 0-360도)',
     minimum: 0,
     maximum: 360,
     example: 60,
@@ -45,33 +40,12 @@ export class StarPropertiesDto {
   color: number;
 
   @ApiProperty({
-    description: '항성 크기 (패턴 복잡도 결정)',
+    description: '항성 크기 (패턴 복잡도 결정: 1-3 레벨)',
     minimum: 0,
     maximum: 100,
     example: 50,
   })
   size: number;
-
-  @ApiPropertyOptional({
-    description: '항성 색온도 (시각적 표현용)',
-    minimum: 0,
-    maximum: 100,
-  })
-  temperature?: number;
-
-  @ApiPropertyOptional({
-    description: '항성 광도 (시각적 표현용)',
-    minimum: 0,
-    maximum: 100,
-  })
-  luminosity?: number;
-
-  @ApiPropertyOptional({
-    description: '항성 반지름 (시각적 표현용)',
-    minimum: 0,
-    maximum: 100,
-  })
-  radius?: number;
 }
 
 // 항성 생성 DTO (시스템 생성 시 내부적으로만 사용)
@@ -109,20 +83,13 @@ export class UpdateStarDto {
   properties?: Partial<StarPropertiesDto>;
 }
 
-// 항성 응답 DTO
+// 항성 응답 DTO (프론트엔드 Star 인터페이스와 일치)
 export class StarResponseDto {
   @ApiProperty({ description: '항성 ID' })
   id: string;
 
   @ApiProperty({ description: '스텔라 시스템 ID' })
   system_id: string;
-
-  @ApiProperty({
-    description: '객체 타입 (항성은 항상 STAR)',
-    enum: ObjectType,
-    example: ObjectType.STAR,
-  })
-  object_type: ObjectType;
 
   @ApiProperty({
     description: '항성 속성',
