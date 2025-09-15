@@ -13,11 +13,12 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ObjectType, InstrumentRole } from './common.dto';
+import { InstrumentRole } from './common.dto';
 
 // 행성 속성 DTO (JSONB로 저장)
-// SONA 오디오 제어 파라미터들
+// SONA 오디오 제어 파라미터들 - 프론트엔드 PlanetProperties와 완전 호환
 export class PlanetPropertiesDto {
+  // === 기본 SONA 속성 (Tri Hybrid 기반) ===
   @ApiProperty({
     description: '행성 크기 (Size - 음역대 폭과 음정 변화 결정)',
     minimum: 0,
@@ -35,8 +36,7 @@ export class PlanetPropertiesDto {
   color: number;
 
   @ApiProperty({
-    description:
-      '행성 밝기 (Brightness - 필터 컷오프, 출력 게인, 레조넌스 결정)',
+    description: '행성 밝기 (Brightness - 필터 컷오프, 출력 게인, 레조넌스 결정)',
     minimum: 0,
     maximum: 100,
     example: 75,
@@ -98,6 +98,111 @@ export class PlanetPropertiesDto {
     example: 0,
   })
   phase: number;
+
+  // === 확장 속성 (프론트엔드 호환) ===
+  @ApiPropertyOptional({
+    description: '행성 크기 (시각적 표현용)',
+    minimum: 0.01,
+    maximum: 1.0,
+    example: 0.5,
+  })
+  planetSize?: number;
+
+  @ApiPropertyOptional({
+    description: '행성 색상 (시각적 표현용, 0-360도)',
+    minimum: 0,
+    maximum: 360,
+    example: 180,
+  })
+  planetColor?: number;
+
+  @ApiPropertyOptional({
+    description: '행성 밝기 (시각적 표현용)',
+    minimum: 0.3,
+    maximum: 5.0,
+    example: 2.65,
+  })
+  planetBrightness?: number;
+
+  @ApiPropertyOptional({
+    description: '항성으로부터 거리 (궤도 시각화용)',
+    minimum: 1.0,
+    maximum: 20.0,
+    example: 10.5,
+  })
+  distanceFromStar?: number;
+
+  @ApiPropertyOptional({
+    description: '공전 속도 (궤도 애니메이션용)',
+    minimum: 0.01,
+    maximum: 1.0,
+    example: 0.5,
+  })
+  orbitSpeed?: number;
+
+  @ApiPropertyOptional({
+    description: '자전 속도 (회전 애니메이션용)',
+    minimum: 0.01,
+    maximum: 1.0,
+    example: 0.5,
+  })
+  rotationSpeed?: number;
+
+  @ApiPropertyOptional({
+    description: '궤도 기울기 (3D 시각화용)',
+    minimum: -180,
+    maximum: 180,
+    example: 0,
+  })
+  inclination?: number;
+
+  @ApiPropertyOptional({
+    description: '오실레이터 타입 (0-7)',
+    minimum: 0,
+    maximum: 7,
+    example: 0,
+  })
+  oscillatorType?: number;
+
+  @ApiPropertyOptional({
+    description: '필터 공명값',
+    minimum: 0.1,
+    maximum: 30.0,
+    example: 1.0,
+  })
+  filterResonance?: number;
+
+  @ApiPropertyOptional({
+    description: '공간 깊이감 (0-100)',
+    minimum: 0,
+    maximum: 100,
+    example: 50,
+  })
+  spatialDepth?: number;
+
+  @ApiPropertyOptional({
+    description: '패턴 복잡도 (0-100)',
+    minimum: 0,
+    maximum: 100,
+    example: 50,
+  })
+  patternComplexity?: number;
+
+  @ApiPropertyOptional({
+    description: '리듬 밀도 (0-100)',
+    minimum: 0,
+    maximum: 100,
+    example: 50,
+  })
+  rhythmDensity?: number;
+
+  @ApiPropertyOptional({
+    description: '멜로디 변화량 (0-100)',
+    minimum: 0,
+    maximum: 100,
+    example: 50,
+  })
+  melodicVariation?: number;
 }
 
 // 행성 생성 DTO
@@ -184,7 +289,7 @@ export class UpdatePlanetDto {
   is_active?: boolean;
 }
 
-// 행성 응답 DTO
+// 행성 응답 DTO (프론트엔드 Planet 인터페이스와 일치)
 export class PlanetResponseDto {
   @ApiProperty({ description: '행성 ID' })
   id: string;
@@ -194,13 +299,6 @@ export class PlanetResponseDto {
 
   @ApiProperty({ description: '행성 이름' })
   name: string;
-
-  @ApiProperty({
-    description: '객체 타입 (행성은 항상 PLANET)',
-    enum: ObjectType,
-    example: ObjectType.PLANET,
-  })
-  object_type: ObjectType;
 
   @ApiProperty({
     description: '악기 역할',
@@ -214,9 +312,6 @@ export class PlanetResponseDto {
     type: PlanetPropertiesDto,
   })
   properties: PlanetPropertiesDto;
-
-  @ApiProperty({ description: '활성화 상태' })
-  is_active: boolean;
 
   @ApiProperty({ description: '생성 시간' })
   created_at: Date;

@@ -66,7 +66,7 @@ export class StellarSystemController {
   async createStellarSystem(
     @User('userId') userId: string,
     @Body() createDto: CreateStellarSystemDto
-  ) {
+  ): Promise<any> {
     return this.stellarSystemService.createStellarSystem(userId, createDto);
   }
 
@@ -107,7 +107,7 @@ export class StellarSystemController {
   async cloneStellarSystem(
     @User('userId') userId: string,
     @Body() cloneDto: CloneStellarSystemDto
-  ) {
+  ): Promise<any> {
     return this.stellarSystemService.cloneStellarSystem(userId, cloneDto);
   }
 
@@ -136,7 +136,7 @@ export class StellarSystemController {
   async getStellarSystem(
     @Param('id') id: string,
     @User('userId') userId: string
-  ) {
+  ): Promise<any> {
     return this.stellarSystemService.getStellarSystem(id, userId);
   }
 
@@ -147,13 +147,21 @@ export class StellarSystemController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '스텔라 시스템 수정' })
-  @ApiResponse({ status: 200, description: '수정 성공' })
-  @ApiResponse({ status: 404, description: '스텔라 시스템을 찾을 수 없음' })
+  @ApiResponse({
+    status: 200,
+    description: '수정 성공',
+    type: StellarSystemResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '스텔라 시스템을 찾을 수 없음',
+    type: ErrorResponseDto,
+  })
   async updateStellarSystem(
     @Param('id') id: string,
     @User('userId') userId: string,
     @Body() updateDto: UpdateStellarSystemDto
-  ) {
+  ): Promise<any> {
     return this.stellarSystemService.updateStellarSystem(id, userId, updateDto);
   }
 
@@ -168,12 +176,19 @@ export class StellarSystemController {
     description:
       '스텔라 시스템을 삭제합니다. 포함된 항성과 행성들도 함께 삭제됩니다.',
   })
-  @ApiResponse({ status: 200, description: '삭제 성공' })
-  @ApiResponse({ status: 404, description: '스텔라 시스템을 찾을 수 없음' })
+  @ApiResponse({
+    status: 200,
+    description: '삭제 성공',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '스텔라 시스템을 찾을 수 없음',
+    type: ErrorResponseDto,
+  })
   async deleteStellarSystem(
     @Param('id') id: string,
     @User('userId') userId: string
-  ) {
+  ): Promise<any> {
     return this.stellarSystemService.deleteStellarSystem(id, userId);
   }
 
@@ -184,7 +199,10 @@ export class StellarSystemController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '내가 만든 항성계 수 조회' })
-  @ApiResponse({ status: 200, description: '성공' })
+  @ApiResponse({
+    status: 200,
+    description: '성공',
+  })
   @ApiResponse({
     status: 401,
     description: '인증 실패',
@@ -195,7 +213,7 @@ export class StellarSystemController {
     description: '존재하지 않음',
     type: ErrorResponseDto,
   })
-  async getMyStellarSystemCount(@User('id') userId: string) {
+  async getMyStellarSystemCount(@User('userId') userId: string): Promise<number> {
     return this.stellarSystemService.countMyStellaSystem(userId);
   }
 }

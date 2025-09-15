@@ -46,11 +46,11 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  // 업로드 루트 경로: 절대 경로면 그대로 사용, 아니면 CWD 기준으로 결합
-  const rootEnv = process.env.UPLOAD_DIR || '/data/uploads';
-  const uploadRoot = isAbsolute(rootEnv)
-    ? rootEnv
-    : join(process.cwd(), rootEnv);
+  // 업로드 루트 경로: 절대 경로만 허용, 환경변수 없으면 서버 루트의 data/uploads 사용
+  const fallbackUploadRoot = join(process.cwd(), 'data/uploads');
+  const rootEnv = process.env.UPLOAD_DIR;
+  const uploadRoot =
+    rootEnv && isAbsolute(rootEnv) ? rootEnv : fallbackUploadRoot;
   await fs.mkdir(uploadRoot, { recursive: true });
 
   const port = process.env.PORT || 3000;

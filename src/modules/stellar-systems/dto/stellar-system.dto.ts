@@ -17,13 +17,13 @@ import { PlanetResponseDto } from './planet.dto';
 // 스텔라 시스템 생성 DTO (항성 자동 생성)
 export class CreateStellarSystemDto {
   @ApiProperty({
-    description: '스텔라 시스템 이름',
+    description: '스텔라 시스템 제목',
     example: 'My First System',
   })
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  name: string;
+  title: string;
 
   @ApiProperty({
     description: '소속 갤럭시 ID',
@@ -62,13 +62,13 @@ export class CreateStellarSystemDto {
 // 스텔라 시스템 수정 DTO
 export class UpdateStellarSystemDto {
   @ApiPropertyOptional({
-    description: '스텔라 시스템 이름',
-    example: 'Updated System Name',
+    description: '스텔라 시스템 제목',
+    example: 'Updated System Title',
   })
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  name?: string;
+  title?: string;
 
   @ApiPropertyOptional({
     description: '스텔라 시스템 설명',
@@ -91,13 +91,13 @@ export class CloneStellarSystemDto {
   source_system_id: string;
 
   @ApiProperty({
-    description: '새로운 시스템 이름',
+    description: '새로운 시스템 제목',
     example: 'Cloned System',
   })
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  name: string;
+  title: string;
 
   @ApiProperty({
     description: '새로운 시스템이 속할 갤럭시 ID',
@@ -122,7 +122,7 @@ export class StellarSystemResponseDto {
   @ApiProperty({ description: '스텔라 시스템 ID' })
   id: string;
 
-  @ApiProperty({ description: '스텔라 시스템 이름' })
+  @ApiProperty({ description: '스텔라 시스템 제목' })
   title: string;
 
   @ApiProperty({ description: '소속 갤럭시 ID' })
@@ -130,6 +130,12 @@ export class StellarSystemResponseDto {
 
   @ApiProperty({ description: '소유자 ID' })
   owner_id: string;
+
+  @ApiPropertyOptional({ description: '최초 생성자 ID' })
+  created_by_id?: string;
+
+  @ApiPropertyOptional({ description: '원작자 ID (클론 시 승계)' })
+  original_author_id?: string | null;
 
   @ApiPropertyOptional({ description: '스텔라 시스템 설명' })
   description?: string | null;

@@ -10,7 +10,6 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ObjectType } from './common.dto';
 
 // 항성 속성 DTO (JSONB로 저장)
 // SONA 전역 오디오 제어 파라미터들 (프론트엔드 StarProperties와 일치)
@@ -84,20 +83,13 @@ export class UpdateStarDto {
   properties?: Partial<StarPropertiesDto>;
 }
 
-// 항성 응답 DTO
+// 항성 응답 DTO (프론트엔드 Star 인터페이스와 일치)
 export class StarResponseDto {
   @ApiProperty({ description: '항성 ID' })
   id: string;
 
   @ApiProperty({ description: '스텔라 시스템 ID' })
   system_id: string;
-
-  @ApiProperty({
-    description: '객체 타입 (항성은 항상 STAR)',
-    enum: ObjectType,
-    example: ObjectType.STAR,
-  })
-  object_type: ObjectType;
 
   @ApiProperty({
     description: '항성 속성',
