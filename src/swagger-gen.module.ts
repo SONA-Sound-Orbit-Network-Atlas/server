@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { FollowsModule } from './modules/follows/follows.module';
 import { StellarSystemModule } from './modules/stellar-systems/stellar-systems.module';
+import { LikesModule } from './modules/likes/likes.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaService } from './prisma/prisma.service';
@@ -120,7 +121,6 @@ class MockPrismaService {
       'galaxy',
       'stellarSystem',
       'planet',
-      'pattern',
       'like',
       'follow',
       'notification',
@@ -192,6 +192,7 @@ class MockPrismaService {
     UsersModule,
     FollowsModule,
     StellarSystemModule,
+    LikesModule,
   ],
   controllers: [AppController],
   providers: [
