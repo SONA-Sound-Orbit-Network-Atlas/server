@@ -71,7 +71,7 @@ export class CreateStellarSystemDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  name: string;
+  title: string;
 
   @ApiProperty({
     description: '소속 갤럭시 ID',
@@ -136,7 +136,7 @@ export class UpdateStellarSystemDto {
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  name?: string;
+  title?: string;
 
   @ApiPropertyOptional({
     description: '스텔라 시스템 설명',
@@ -177,7 +177,7 @@ export class CloneStellarSystemDto {
   })
   @IsString()
   @IsNotEmpty()
-  source_system_id: string;
+  create_source_id: string;
 
   @ApiProperty({
     description: '새로운 시스템 이름',
@@ -186,7 +186,7 @@ export class CloneStellarSystemDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  name: string;
+  title: string;
 
   @ApiProperty({
     description: '새로운 시스템이 속할 갤럭시 ID',
@@ -212,19 +212,43 @@ export class StellarSystemResponseDto {
   id: string;
 
   @ApiProperty({ description: '스텔라 시스템 이름' })
-  name: string;
+  title: string;
 
   @ApiProperty({ description: '소속 갤럭시 ID' })
   galaxy_id: string;
 
-  @ApiProperty({ description: '소유자 ID' })
-  owner_id: string;
+  @ApiProperty({ description: '현재 소유자 ID' })
+  creator_id: string;
 
-  @ApiPropertyOptional({ description: '최초 생성자 ID' })
-  created_by_id?: string;
+  @ApiProperty({
+    description:
+      '최초 생성자 ID (원작자). 클론 시 원본의 author_id를 계승합니다.',
+  })
+  author_id: string;
 
-  @ApiPropertyOptional({ description: '원작자 ID (클론 시 승계)' })
-  original_author_id?: string | null;
+  @ApiProperty({
+    description:
+      '이 시스템을 클론할 때 사용된 직접적인 원본 시스템의 ID. 최초 생성(클론이 아님)인 경우에도 자기 자신의 ID가 들어갑니다. (null 불가)',
+  })
+  create_source_id: string;
+
+  @ApiProperty({
+    description:
+      '클론 소스 시스템의 이름 (create_source_id에 해당하는 시스템 이름). 항상 문자열로 반환됩니다.',
+  })
+  create_source_name: string;
+
+  @ApiProperty({
+    description:
+      '클론 체인의 가장 첫 번째 원본 시스템 ID. 최초 생성(클론이 아님)인 경우 자기 자신의 ID가 들어갑니다. (null 불가)',
+  })
+  original_source_id: string;
+
+  @ApiProperty({
+    description:
+      '최초 소스 시스템의 이름 (original_source_id에 해당하는 시스템 이름). 항상 문자열로 반환됩니다.',
+  })
+  original_source_name: string;
 
   @ApiPropertyOptional({ description: '스텔라 시스템 설명' })
   description?: string | null;
@@ -235,9 +259,6 @@ export class StellarSystemResponseDto {
     example: 'MANUAL',
   })
   created_via: string;
-
-  @ApiPropertyOptional({ description: '원본 시스템 ID (클론인 경우)' })
-  source_system_id?: string | null;
 
   @ApiProperty({ description: '포함된 항성 정보', type: StarResponseDto })
   star: StarResponseDto | null;

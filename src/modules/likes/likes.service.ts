@@ -103,8 +103,7 @@ export class LikesService {
       id: string;
       title: string;
       galaxy_id: string;
-      owner_id: string;
-      created_by_id?: string;
+      creator_id: string;
       created_at: Date;
       updated_at: Date;
       _count?: { planets?: number };
@@ -117,8 +116,7 @@ export class LikesService {
       id: sys.id,
       title: sys.title,
       galaxy_id: sys.galaxy_id,
-      owner_id: sys.owner_id,
-      created_by_id: sys.created_by_id,
+      creator_id: sys.created_by_id,
       created_at: sys.created_at,
       updated_at: sys.updated_at,
       planet_count: sys._count?.planets ?? 0,
@@ -146,8 +144,7 @@ export class LikesService {
               id: true,
               title: true,
               galaxy_id: true,
-              owner_id: true,
-              created_by_id: true,
+              creator_id: true,
               created_at: true,
               updated_at: true,
               _count: { select: { planets: true } },
@@ -159,6 +156,14 @@ export class LikesService {
       this.prisma.like.count({ where: { user_id: userId } }),
     ]);
 
+    return {
+      data: rows.map(row => ({
+        system: row.system,
+        liked_at: row.created_at,
+      })),
+      meta: buildPaginationMeta(total, dto),
+    };
+  }
     const data: SystemListItem[] = rows.map(row =>
       this.toSystemListItem(row.system as any, { liked_at: row.created_at })
     );
@@ -172,6 +177,21 @@ export class LikesService {
    */
   async getLikeRankings(
     dto: PaginationDto & { rangk_type?: RangkType }
+  ): Promise<
+    PaginatedResponse<{
+      system: {
+        id: string;
+        title: string;
+        galaxy_id: string;
+        creator_id: string;
+        created_at: Date;
+        updated_at: Date;
+      };
+      like_count: number;
+      rank: number;
+    }>
+  > {
+    // 1) 기간 필터 (KST 달력 기준)
   ): Promise<PaginatedResponse<SystemListItem>> {
     // 0) 안전한 페이지/리밋 계산
     const rawPage = Number((dto as any).page ?? 1);
@@ -278,8 +298,7 @@ export class LikesService {
         id: true,
         title: true,
         galaxy_id: true,
-        owner_id: true,
-        created_by_id: true,
+        creator_id: true,
         created_at: true,
         updated_at: true,
         _count: { select: { planets: true } },
@@ -296,6 +315,18 @@ export class LikesService {
           rank: dto.rangk_type === RangkType.RANDOM ? idx + 1 : skip + idx + 1,
         });
       })
+      .filter(Boolean) as Array<{
+      system: {
+        id: string;
+        title: string;
+        galaxy_id: string;
+        creator_id: string;
+        created_at: Date;
+        updated_at: Date;
+      };
+      like_count: number;
+      rank: number;
+    }>;
       .filter(Boolean) as SystemListItem[];
 
     return {

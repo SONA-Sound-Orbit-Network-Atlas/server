@@ -110,6 +110,13 @@ export class StarResponseDto {
   name: string;
 
   @ApiProperty({
+    description: '객체 타입 (항상 STAR)',
+    enum: ['STAR', 'PLANET'],
+    example: 'STAR',
+  })
+  object_type: string;
+
+  @ApiProperty({
     description: '항성 속성',
     type: StarPropertiesDto,
   })

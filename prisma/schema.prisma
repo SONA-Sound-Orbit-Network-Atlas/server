@@ -25,13 +25,10 @@ model User {
   image            String? // 프로필 이미지 URL
   created_at       DateTime        @default(now())
   updated_at       DateTime        @updatedAt
-  // 관계: 사용자가 소유한 갤럭시들 (제거됨)
-  // 관계: 사용자가 소유한 항성계들
-  stellar_systems  StellarSystem[] @relation("SystemOwner")
-  // 관계: 사용자가 원작자인 항성계들
-  authored_systems StellarSystem[] @relation("OriginalAuthor")
-  // 관계: 사용자가 생성한(만든) 항성계들
+  // 관계: 사용자가 소유한 항성계들 (현재 소유자)
   created_systems  StellarSystem[] @relation("SystemCreator")
+  // 관계: 사용자가 최초 생성한 항성계들 (원작자)
+  authored_systems StellarSystem[] @relation("SystemAuthor")
   // 관계: 좋아요한 항성계들
   likes            Like[]
   // 관계: 팔로우 (팔로워)
@@ -72,10 +69,10 @@ model Galaxy {
 model StellarSystem {
   id                 String  @id @default(cuid())
   galaxy_id          String
-  owner_id           String // 현재 소유자 (변경 가능)
-  created_by_id      String // 최초 생성 실행자 (불변 권장)
-  original_author_id String? // 원작자 (클론 시 원본의 원작자/없으면 원본 생성자)
-  source_system_id   String? // 원본 시스템 (CLONE일 때 부모, MANUAL일 땐 null)
+  creator_id         String  // 현재 소유자 (변경 가능)
+  author_id          String  // 최초 생성자 (불변)
+  create_source_id   String  // 현재 스텔라의 클론 소스 (CLONE일 때 직접 부모, MANUAL일 때는 자기 자신 ID)
+  original_source_id String  // 최초 스텔라 (클론 체인의 가장 첫 번째, MANUAL일 때는 자기 자신 ID)
 
   title String
 
@@ -90,23 +87,24 @@ model StellarSystem {
   galaxy Galaxy @relation(fields: [galaxy_id], references: [id], onDelete: Cascade)
 
   // (B) 현재 소유자 (N:1, User와 다중 관계이므로 name으로 구분)
-  // - FK: owner_id -> users.id
-  owner User @relation(fields: [owner_id], references: [id], onDelete: Cascade, name: "SystemOwner")
+  // - FK: creator_id -> users.id
+  creator User @relation(fields: [creator_id], references: [id], onDelete: Cascade, name: "SystemCreator")
 
   // (C) 최초 생성자 (N:1)
-  // - FK: created_by_id -> users.id
-  created_by User @relation(fields: [created_by_id], references: [id], onDelete: Cascade, name: "SystemCreator")
+  // - FK: author_id -> users.id
+  author User @relation(fields: [author_id], references: [id], onDelete: Cascade, name: "SystemAuthor")
 
-  // (D) 원작자(선택) (N:1)
-  // - FK: original_author_id -> users.id
-  // - 클론 시: 원본의 original_author_id가 있으면 승계, 없으면 원본의 created_by_id 사용
-  original_author User? @relation(fields: [original_author_id], references: [id], name: "OriginalAuthor")
-
-  // (E) 클론 계보 (Self-Reference)
-  // - 부모(원본) 시스템: source_system (N:1)
+  // (D) 클론 계보 (Self-Reference)
+  // - 직접 부모(클론 소스) 시스템: create_source (N:1)
   // - 자식(복제된) 시스템들: cloned_systems (1:N)
-  source_system  StellarSystem?  @relation(fields: [source_system_id], references: [id], name: "SourceSystem")
-  cloned_systems StellarSystem[] @relation("SourceSystem")
+  create_source    StellarSystem   @relation(fields: [create_source_id], references: [id], name: "CreateSource")
+  cloned_systems   StellarSystem[] @relation("CreateSource")
+  
+  // (E) 최초 스텔라 추적 (Self-Reference)
+  // - 최초 원본: original_source (N:1)
+  // - 파생된 시스템들: derived_systems (1:N)  
+  original_source  StellarSystem   @relation(fields: [original_source_id], references: [id], name: "OriginalSource")
+  derived_systems  StellarSystem[] @relation("OriginalSource")
 
   // (F) 중앙 항성 (1:1) - 새로 추가
   // - Star.system_id -> StellarSystem.id
@@ -124,9 +122,10 @@ model StellarSystem {
   // @@unique([galaxy_id, title])
 
   @@index([galaxy_id])
-  @@index([owner_id])
-  @@index([created_by_id])
-  @@index([source_system_id])
+  @@index([creator_id])
+  @@index([author_id])
+  @@index([create_source_id])
+  @@index([original_source_id])
   @@map("stellar_systems")
 }
 
