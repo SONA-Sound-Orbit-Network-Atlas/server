@@ -66,7 +66,7 @@ export class StellarSystemController {
   async createStellarSystem(
     @User('userId') userId: string,
     @Body() createDto: CreateStellarSystemDto
-  ): Promise<any> {
+  ): Promise<StellarSystemResponseDto> {
     return this.stellarSystemService.createStellarSystem(userId, createDto);
   }
 
@@ -107,7 +107,7 @@ export class StellarSystemController {
   async cloneStellarSystem(
     @User('userId') userId: string,
     @Body() cloneDto: CloneStellarSystemDto
-  ): Promise<any> {
+  ): Promise<StellarSystemResponseDto> {
     return this.stellarSystemService.cloneStellarSystem(userId, cloneDto);
   }
 
@@ -136,7 +136,7 @@ export class StellarSystemController {
   async getStellarSystem(
     @Param('id') id: string,
     @User('userId') userId: string
-  ): Promise<any> {
+  ): Promise<StellarSystemResponseDto> {
     return this.stellarSystemService.getStellarSystem(id, userId);
   }
 
@@ -161,7 +161,7 @@ export class StellarSystemController {
     @Param('id') id: string,
     @User('userId') userId: string,
     @Body() updateDto: UpdateStellarSystemDto
-  ): Promise<any> {
+  ): Promise<StellarSystemResponseDto> {
     return this.stellarSystemService.updateStellarSystem(id, userId, updateDto);
   }
 
@@ -188,8 +188,8 @@ export class StellarSystemController {
   async deleteStellarSystem(
     @Param('id') id: string,
     @User('userId') userId: string
-  ): Promise<any> {
-    return this.stellarSystemService.deleteStellarSystem(id, userId);
+  ): Promise<void> {
+    await this.stellarSystemService.deleteStellarSystem(id, userId);
   }
 
   /**
@@ -213,7 +213,9 @@ export class StellarSystemController {
     description: '존재하지 않음',
     type: ErrorResponseDto,
   })
-  async getMyStellarSystemCount(@User('userId') userId: string): Promise<number> {
+  async getMyStellarSystemCount(
+    @User('userId') userId: string
+  ): Promise<number> {
     return this.stellarSystemService.countMyStellaSystem(userId);
   }
 }

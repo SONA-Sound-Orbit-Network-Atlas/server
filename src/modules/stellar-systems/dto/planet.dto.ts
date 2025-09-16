@@ -36,7 +36,8 @@ export class PlanetPropertiesDto {
   color: number;
 
   @ApiProperty({
-    description: '행성 밝기 (Brightness - 필터 컷오프, 출력 게인, 레조넌스 결정)',
+    description:
+      '행성 밝기 (Brightness - 필터 컷오프, 출력 게인, 레조넌스 결정)',
     minimum: 0,
     maximum: 100,
     example: 75,

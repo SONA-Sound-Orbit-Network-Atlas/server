@@ -34,15 +34,6 @@ export class CreateStellarSystemDto {
   galaxy_id: string;
 
   @ApiPropertyOptional({
-    description: '스텔라 시스템 설명',
-    example: 'A beautiful stellar system with multiple planets',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  description?: string;
-
-  @ApiPropertyOptional({
     description: '항성의 초기 속성 (선택적, 미제공 시 기본값 사용)',
     type: StarPropertiesDto,
     example: {
