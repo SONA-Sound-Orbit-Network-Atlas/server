@@ -11,11 +11,10 @@ type FollowUserSummary = {
   id: string;
   username: string;
   email: string;
-  about: string;
+  about: string | null;
   created_at: Date;
   isMutual: boolean;
 };
-
 
 @Injectable()
 export class FollowsService {
@@ -59,11 +58,10 @@ export class FollowsService {
    * 언 팔로우
    */
   async unfollow(currentUserId: string, targetUserId: string) {
+    if (currentUserId === targetUserId) {
+      throw new BadRequestException('자기 자신을 팔로우할 수 없습니다.');
+    }
     try {
-      if (currentUserId === targetUserId) {
-        throw new BadRequestException('자기 자신을 팔로우할 수 없습니다.');
-      }
-
       await this.prisma.follow.delete({
         where: {
           follower_id_followee_id: {
@@ -179,7 +177,7 @@ export class FollowsService {
       items,
     };
   }
-  
+
   /*
    * 특정 유저의 팔로워/팔로잉 수 통계
    */
