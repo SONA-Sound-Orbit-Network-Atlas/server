@@ -25,8 +25,7 @@ model User {
   image            String? // 프로필 이미지 URL
   created_at       DateTime        @default(now())
   updated_at       DateTime        @updatedAt
-  // 관계: 사용자가 소유한 갤럭시들
-  galaxies         Galaxy[]
+  // 관계: 사용자가 소유한 갤럭시들 (제거됨)
   // 관계: 사용자가 소유한 항성계들
   stellar_systems  StellarSystem[] @relation("SystemOwner")
   // 관계: 사용자가 원작자인 항성계들
@@ -60,20 +59,13 @@ enum ObjectType {
 model Galaxy {
   id         String   @id @default(cuid())
   name       String
-  owner_id   String
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-
-  // 관계: 갤럭시 소유자 (1 User : N Galaxy)
-  // - Galaxy.owner_id -> User.id
-  // - 갤럭시가 삭제되면 해당 갤럭시 레코드만 삭제(Cascade는 Galaxy->User가 아니라 FK 소유측에만 의미)
-  owner User @relation(fields: [owner_id], references: [id], onDelete: Cascade)
 
   // 관계: 이 갤럭시에 속한 항성계들 (1 Galaxy : N StellarSystem)
   // - StellarSystem.galaxy_id -> Galaxy.id
   stellar_systems StellarSystem[]
 
-  @@index([owner_id]) // 소유자 기준 갤럭시 조회 최적화
   @@map("galaxies")
 }
 
