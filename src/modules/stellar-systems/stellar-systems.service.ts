@@ -1,4 +1,5 @@
 import { Prisma, StellarSystem, Star, Planet } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import {
   ForbiddenException,
   Injectable,
@@ -30,7 +31,9 @@ export class StellarSystemService {
     dto: CreateStellarSystemDto
   ): Promise<StellarSystemResponseDto> {
     // userId 검증 (인증 실패 시 대응)
+
     if (!userId) {
+      console.log('[StellarSystemService] Forbidden: userId is missing', { userId, dto });
       throw new ForbiddenException('로그인이 필요합니다.');
     }
 
@@ -41,20 +44,23 @@ export class StellarSystemService {
     });
 
     if (!galaxy) {
+      console.log('[StellarSystemService] NotFound: galaxy not found', { galaxyId: dto.galaxy_id, dto });
       throw new NotFoundException('해당 갤럭시를 찾을 수 없습니다.');
     }
 
     const result = await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
-        // 1. 스텔라 시스템 생성 (스키마의 모든 필수 필드 포함)
-        const system = await tx.stellarSystem.create({
+        // 1. 스텔라 시스템 생성 (소스 ID는 자기 자신으로 즉시 설정)
+        const newId = randomUUID();
+        const finalSystem = await tx.stellarSystem.create({
           data: {
-            title: dto.name, // DTO의 name을 title 필드에 저장 (DB는 title 유지)
+            id: newId,
+            title: dto.title, // title 필드에 저장
             galaxy_id: dto.galaxy_id,
             creator_id: userId, // 현재 소유자
             author_id: userId, // 최초 생성자 (새로 생성하는 경우 동일)
-            create_source_id: null, // 클론이 아닌 새 생성이므로 null
-            original_source_id: null, // 최초 생성이므로 null
+            create_source_id: newId, // 자기 자신의 ID를 클론 소스로 설정
+            original_source_id: newId, // 자기 자신의 ID를 최초 소스로 설정
             created_via: 'MANUAL',
           },
         });
@@ -74,7 +80,7 @@ export class StellarSystemService {
         );
         const star = await tx.star.create({
           data: {
-            system_id: system.id,
+            system_id: finalSystem.id,
             properties: starPropertiesJson,
           },
         });
@@ -85,7 +91,7 @@ export class StellarSystemService {
           for (const planetDto of dto.planets) {
             const planet = await tx.planet.create({
               data: {
-                system_id: system.id,
+                system_id: finalSystem.id,
                 name: planetDto.name,
                 instrument_role: planetDto.role,
                 is_active: true,
@@ -97,7 +103,11 @@ export class StellarSystemService {
         }
 
         // 4. 생성된 시스템, 항성, 행성 정보 반환
-        return this.mapToStellarSystemResponseDto(system, star, initialPlanets);
+        return await this.mapToStellarSystemResponseDto(
+          finalSystem,
+          star,
+          initialPlanets
+        );
       }
     );
 
@@ -129,7 +139,7 @@ export class StellarSystemService {
     }
 
     // DTO 형식으로 반환 (프론트엔드 호환)
-    return this.mapToStellarSystemResponseDto(
+    return await this.mapToStellarSystemResponseDto(
       system,
       system.star,
       system.planets
@@ -177,13 +187,14 @@ export class StellarSystemService {
     // 트랜잭션으로 시스템, 항성, 행성 모두 클론
     const result = await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
-        // 원본 계보 계산: 최초 스텔라 ID, 최초 생성자(원작자) ID 승계
-        const computedOriginalSourceId =
-          sourceSystem.original_source_id ?? dto.create_source_id;
+        // 원본 계보 계산: 최초 스텔라 title, 최초 생성자(원작자) ID 승계
+        const computedOriginalSourceId: string =
+          sourceSystem.original_source_id ?? sourceSystem.id;
 
         // 최초 생성자(원작자)는 최초 스텔라의 author_id를 사용
         let inheritedAuthorId = sourceSystem.author_id;
         if (sourceSystem.original_source_id) {
+          // original_source_id는 System의 ID이므로 ID로 조회
           const original = await tx.stellarSystem.findUnique({
             where: { id: sourceSystem.original_source_id },
             select: { author_id: true },
@@ -194,12 +205,12 @@ export class StellarSystemService {
         // 1. 새 스텔라 시스템 생성 (클론)
         const clonedSystem = await tx.stellarSystem.create({
           data: {
-            title: dto.name, // DTO의 name을 title 필드에 저장
+            title: dto.title, // DTO의 title을 title 필드에 저장
             galaxy_id: dto.galaxy_id,
             creator_id: userId, // 현재 소유자 (클론한 사람)
             author_id: inheritedAuthorId, // 최초 생성자(원작자) 승계
-            create_source_id: dto.create_source_id, // 클론 소스
-            original_source_id: computedOriginalSourceId, // 최초 스텔라(체인 첫 노드)
+            create_source_id: sourceSystem.id, // 클론 소스의 ID
+            original_source_id: computedOriginalSourceId, // 최초 스텔라의 ID
             created_via: 'CLONE',
           },
         });
@@ -234,7 +245,7 @@ export class StellarSystemService {
         }
 
         // 4. 복제된 시스템 정보 반환 (프론트엔드 호환 DTO 형식)
-        return this.mapToStellarSystemResponseDto(
+        return await this.mapToStellarSystemResponseDto(
           clonedSystem,
           clonedStar,
           clonedPlanets
@@ -270,11 +281,11 @@ export class StellarSystemService {
     // 전체 편집: 이름/항성/행성까지 한 번에 업데이트(트랜잭션)
     const result = await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
-        // 1) 시스템 기본 정보 업데이트 (name -> title)
+        // 1) 시스템 기본 정보 업데이트 (title -> title)
         const sys = await tx.stellarSystem.update({
           where: { id },
           data: {
-            title: dto.name ?? undefined,
+            title: dto.title ?? undefined,
           },
         });
 
@@ -353,7 +364,7 @@ export class StellarSystemService {
           planets = nextPlanets;
         }
 
-        return this.mapToStellarSystemResponseDto(sys, star, planets);
+        return await this.mapToStellarSystemResponseDto(sys, star, planets);
       }
     );
 
@@ -396,25 +407,60 @@ export class StellarSystemService {
   /**
    * Prisma 모델을 StellarSystemResponseDto로 변환하는 헬퍼 메서드
    */
-  private mapToStellarSystemResponseDto(
+  private async mapToStellarSystemResponseDto(
     system: StellarSystem,
     star: Star | null,
     planets: Planet[]
-  ): StellarSystemResponseDto {
+  ): Promise<StellarSystemResponseDto> {
+    // 소스 시스템들의 이름 조회 (항상 문자열 보장)
+    let createSourceName: string = '';
+    let originalSourceName: string = '';
+
+    if (system.create_source_id === system.id) {
+      // 자기 자신을 소스로 가진 최초 생성 케이스
+      createSourceName = system.title;
+    } else if (system.create_source_id) {
+      const createSource = await this.prisma.stellarSystem.findUnique({
+        where: { id: system.create_source_id },
+        select: { title: true },
+      });
+      createSourceName = createSource?.title ?? '';
+    }
+
+    if (system.original_source_id === system.id) {
+      // 최초 원작이 자기 자신인 케이스
+      originalSourceName = system.title;
+    } else if (
+      system.original_source_id &&
+      system.original_source_id === system.create_source_id
+    ) {
+      // 동일 소스일 경우 중복 조회 방지
+      originalSourceName = createSourceName;
+    } else if (system.original_source_id) {
+      const originalSource = await this.prisma.stellarSystem.findUnique({
+        where: { id: system.original_source_id },
+        select: { title: true },
+      });
+      originalSourceName = originalSource?.title ?? '';
+    }
+
     return {
       id: system.id,
-      name: system.title, // DB의 title을 프론트엔드의 name으로 매핑
+      title: system.title, // DB의 title을 프론트엔드의 title로 매핑
       galaxy_id: system.galaxy_id,
       creator_id: system.creator_id,
       author_id: system.author_id,
-      create_source_id: system.create_source_id,
-      original_source_id: system.original_source_id,
+      create_source_id: system.create_source_id ?? system.id,
+      create_source_name: createSourceName,
+      original_source_id: system.original_source_id ?? system.id,
+      original_source_name: originalSourceName,
       created_via: system.created_via,
       star: star
         ? {
             id: star.id,
             system_id: star.system_id,
-            name: star.name, // Star의 name 필드 추가
+            name: star.name,
+            object_type: 'STAR',
             properties: this.convertFromJsonValue<StarPropertiesDto>(
               star.properties
             ),
@@ -426,6 +472,7 @@ export class StellarSystemService {
         id: planet.id,
         system_id: planet.system_id,
         name: planet.name,
+        object_type: 'PLANET',
         role: planet.instrument_role as InstrumentRole,
         properties: this.convertFromJsonValue<PlanetPropertiesDto>(
           planet.properties

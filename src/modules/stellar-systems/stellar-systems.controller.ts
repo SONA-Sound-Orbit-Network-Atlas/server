@@ -42,7 +42,7 @@ export class StellarSystemController {
   @ApiOperation({
     summary: '스텔라 시스템 생성',
     description:
-      '새로운 스텔라 시스템을 생성합니다. 항성은 자동으로 생성되며, 초기 행성들도 함께 생성할 수 있습니다.\n\n주의: 본 API(POST)와 수정 API(PUT)는 동일한 바디 구조를 사용합니다. PUT에서는 name/star/planets 중 제공된 필드만 반영됩니다.',
+      '새로운 스텔라 시스템을 생성합니다. 항성은 자동으로 생성되며, 초기 행성들도 함께 생성할 수 있습니다.\n\n주의: 본 API(POST)와 수정 API(PUT)는 동일한 바디 구조를 사용합니다. PUT에서는 title/star/planets 중 제공된 필드만 반영됩니다.',
   })
   @ApiBody({
     description: '생성 요청 바디 예시',
@@ -51,7 +51,7 @@ export class StellarSystemController {
       default: {
         summary: '기본 생성 예시',
         value: {
-          name: 'My First System',
+          title: 'My First System',
           galaxy_id: 'gal_abc123',
           star: { spin: 50, brightness: 75, color: 60, size: 50 },
           planets: [
@@ -97,7 +97,7 @@ export class StellarSystemController {
     type: ErrorResponseDto,
   })
   async createStellarSystem(
-    @User('userId') userId: string,
+    @User('id') userId: string,
     @Body() createDto: CreateStellarSystemDto
   ): Promise<StellarSystemResponseDto> {
     return this.stellarSystemService.createStellarSystem(userId, createDto);
@@ -187,13 +187,13 @@ export class StellarSystemController {
   @ApiOperation({ summary: '스텔라 시스템 수정' })
   @ApiBody({
     description:
-      '수정 요청 바디 예시 (POST와 동일한 구조를 사용합니다. name/star/planets 중 제공된 필드만 반영됩니다).',
+      '수정 요청 바디 예시 (POST와 동일한 구조를 사용합니다. title/star/planets 중 제공된 필드만 반영됩니다).',
     type: UpdateStellarSystemDto,
     examples: {
       full: {
         summary: '전체 편집 예시',
         value: {
-          name: 'Updated System',
+          title: 'Updated System',
           star: { spin: 62, brightness: 70, color: 220, size: 60 },
           planets: [
             {

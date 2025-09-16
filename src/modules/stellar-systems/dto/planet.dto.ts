@@ -387,6 +387,13 @@ export class PlanetResponseDto {
   name: string;
 
   @ApiProperty({
+    description: '객체 타입 (항상 PLANET)',
+    enum: ['STAR', 'PLANET'],
+    example: 'PLANET',
+  })
+  object_type: string;
+
+  @ApiProperty({
     description: '악기 역할',
     enum: InstrumentRole,
     example: InstrumentRole.DRUM,

@@ -71,8 +71,8 @@ model StellarSystem {
   galaxy_id          String
   creator_id         String  // 현재 소유자 (변경 가능)
   author_id          String  // 최초 생성자 (불변)
-  create_source_id   String? // 현재 스텔라의 클론 소스 (CLONE일 때 직접 부모, MANUAL일 땐 null)
-  original_source_id String? // 최초 스텔라 (클론 체인의 가장 첫 번째)
+  create_source_id   String  // 현재 스텔라의 클론 소스 (CLONE일 때 직접 부모, MANUAL일 때는 자기 자신 ID)
+  original_source_id String  // 최초 스텔라 (클론 체인의 가장 첫 번째, MANUAL일 때는 자기 자신 ID)
 
   title String
 
@@ -97,13 +97,13 @@ model StellarSystem {
   // (D) 클론 계보 (Self-Reference)
   // - 직접 부모(클론 소스) 시스템: create_source (N:1)
   // - 자식(복제된) 시스템들: cloned_systems (1:N)
-  create_source    StellarSystem?  @relation(fields: [create_source_id], references: [id], name: "CreateSource")
+  create_source    StellarSystem   @relation(fields: [create_source_id], references: [id], name: "CreateSource")
   cloned_systems   StellarSystem[] @relation("CreateSource")
   
   // (E) 최초 스텔라 추적 (Self-Reference)
   // - 최초 원본: original_source (N:1)
   // - 파생된 시스템들: derived_systems (1:N)  
-  original_source  StellarSystem?  @relation(fields: [original_source_id], references: [id], name: "OriginalSource")
+  original_source  StellarSystem   @relation(fields: [original_source_id], references: [id], name: "OriginalSource")
   derived_systems  StellarSystem[] @relation("OriginalSource")
 
   // (F) 중앙 항성 (1:1) - 새로 추가

@@ -13,8 +13,12 @@ export const User = createParamDecorator(
     const request = ctx.switchToHttp().getRequest();
     const user = request.user;
 
+    console.log('User Decorator - Request headers:', request.headers?.authorization);
+    console.log('User Decorator - User object:', user);
+
     // 인증된 사용자가 없으면 예외 발생
     if (!user) {
+      console.log('User Decorator - No user found, throwing UnauthorizedException');
       throw new UnauthorizedException('로그인이 필요합니다.');
     }
 
