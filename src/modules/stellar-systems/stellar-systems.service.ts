@@ -51,10 +51,10 @@ export class StellarSystemService {
           data: {
             title: dto.name, // DTO의 name을 title 필드에 저장 (DB는 title 유지)
             galaxy_id: dto.galaxy_id,
-            owner_id: userId,
-            created_by_id: userId,
-            original_author_id: userId, // 새로 생성하는 경우 원작자도 동일
-            source_system_id: null, // 클론이 아닌 새 생성이므로 null
+            creator_id: userId, // 현재 소유자
+            author_id: userId, // 최초 생성자 (새로 생성하는 경우 동일)
+            create_source_id: null, // 클론이 아닌 새 생성이므로 null
+            original_source_id: null, // 최초 생성이므로 null
             created_via: 'MANUAL',
           },
         });
@@ -124,7 +124,7 @@ export class StellarSystemService {
     }
 
     // 소유자 확인 (필요시)
-    if (system.owner_id !== userId) {
+    if (system.creator_id !== userId) {
       throw new ForbiddenException('이 스텔라 시스템에 대한 권한이 없습니다.');
     }
 
@@ -153,7 +153,7 @@ export class StellarSystemService {
 
     // 원본 시스템 확인
     const sourceSystem = await this.prisma.stellarSystem.findUnique({
-      where: { id: dto.source_system_id },
+      where: { id: dto.create_source_id },
       include: {
         star: true,
         planets: true,
@@ -177,17 +177,29 @@ export class StellarSystemService {
     // 트랜잭션으로 시스템, 항성, 행성 모두 클론
     const result = await this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
+        // 원본 계보 계산: 최초 스텔라 ID, 최초 생성자(원작자) ID 승계
+        const computedOriginalSourceId =
+          sourceSystem.original_source_id ?? dto.create_source_id;
+
+        // 최초 생성자(원작자)는 최초 스텔라의 author_id를 사용
+        let inheritedAuthorId = sourceSystem.author_id;
+        if (sourceSystem.original_source_id) {
+          const original = await tx.stellarSystem.findUnique({
+            where: { id: sourceSystem.original_source_id },
+            select: { author_id: true },
+          });
+          inheritedAuthorId = original?.author_id ?? sourceSystem.author_id;
+        }
+
         // 1. 새 스텔라 시스템 생성 (클론)
         const clonedSystem = await tx.stellarSystem.create({
           data: {
             title: dto.name, // DTO의 name을 title 필드에 저장
             galaxy_id: dto.galaxy_id,
-            owner_id: userId,
-            created_by_id: userId,
-            // 원작자 승계: 원본의 original_author_id가 있으면 사용, 없으면 원본의 created_by_id 사용
-            original_author_id:
-              sourceSystem.original_author_id || sourceSystem.created_by_id,
-            source_system_id: dto.source_system_id,
+            creator_id: userId, // 현재 소유자 (클론한 사람)
+            author_id: inheritedAuthorId, // 최초 생성자(원작자) 승계
+            create_source_id: dto.create_source_id, // 클론 소스
+            original_source_id: computedOriginalSourceId, // 최초 스텔라(체인 첫 노드)
             created_via: 'CLONE',
           },
         });
@@ -244,14 +256,14 @@ export class StellarSystemService {
     // 소유자 확인
     const owning = await this.prisma.stellarSystem.findUnique({
       where: { id },
-      select: { id: true, owner_id: true },
+      select: { id: true, creator_id: true },
     });
 
     if (!owning) {
       throw new NotFoundException('스텔라 시스템을 찾을 수 없습니다.');
     }
 
-    if (owning.owner_id !== userId) {
+    if (owning.creator_id !== userId) {
       throw new ForbiddenException('이 스텔라 시스템에 대한 권한이 없습니다.');
     }
 
@@ -355,14 +367,14 @@ export class StellarSystemService {
     // 소유자 확인
     const system = await this.prisma.stellarSystem.findUnique({
       where: { id },
-      select: { id: true, owner_id: true },
+      select: { id: true, creator_id: true },
     });
 
     if (!system) {
       throw new NotFoundException('스텔라 시스템을 찾을 수 없습니다.');
     }
 
-    if (system.owner_id !== userId) {
+    if (system.creator_id !== userId) {
       throw new ForbiddenException('이 스텔라 시스템에 대한 권한이 없습니다.');
     }
 
@@ -377,7 +389,7 @@ export class StellarSystemService {
    */
   async countMyStellaSystem(userId: string): Promise<number> {
     return this.prisma.stellarSystem.count({
-      where: { owner_id: userId },
+      where: { creator_id: userId },
     });
   }
 
@@ -393,11 +405,11 @@ export class StellarSystemService {
       id: system.id,
       name: system.title, // DB의 title을 프론트엔드의 name으로 매핑
       galaxy_id: system.galaxy_id,
-      owner_id: system.owner_id,
-      created_by_id: system.created_by_id,
-      original_author_id: system.original_author_id,
+      creator_id: system.creator_id,
+      author_id: system.author_id,
+      create_source_id: system.create_source_id,
+      original_source_id: system.original_source_id,
       created_via: system.created_via,
-      source_system_id: system.source_system_id,
       star: star
         ? {
             id: star.id,

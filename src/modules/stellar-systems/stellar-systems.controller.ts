@@ -114,8 +114,13 @@ export class StellarSystemController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: '스텔라 시스템 클론',
-    description:
-      '기존 스텔라 시스템을 복제하여 새로운 시스템을 생성합니다. 항성과 행성들이 모두 복제됩니다.',
+    description: `기존 스텔라 시스템을 복제하여 새로운 시스템을 생성합니다. 항성과 행성들이 모두 복제됩니다.
+
+- **소유권**: 새로운 시스템의 \`creator_id\`는 요청한 사용자가 됩니다.
+- **원작자**: 원본 시스템의 \`author_id\`가 그대로 계승됩니다.
+- **클론 출처**:
+  - \`create_source_id\`는 원본 시스템의 ID로 설정됩니다.
+  - \`original_source_id\`는 원본의 \`original_source_id\`를 따르며, 원본이 최초일 경우 원본 ID로 설정됩니다. 이를 통해 클론 체인의 최초 원본을 계속 추적할 수 있습니다.`,
   })
   @ApiResponse({
     status: 201,

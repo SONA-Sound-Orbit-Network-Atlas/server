@@ -87,8 +87,7 @@ export class LikesService {
         id: string;
         title: string;
         galaxy_id: string;
-        owner_id: string;
-        created_by_id: string;
+        creator_id: string;
         created_at: Date;
         updated_at: Date;
       };
@@ -107,7 +106,7 @@ export class LikesService {
               id: true,
               title: true,
               galaxy_id: true,
-              owner_id: true,
+              creator_id: true,
               created_at: true,
               updated_at: true,
             },
@@ -119,7 +118,10 @@ export class LikesService {
     ]);
 
     return {
-      data: rows.map(row => ({ system: row.system, liked_at: row.created_at })),
+      data: rows.map(row => ({
+        system: row.system,
+        liked_at: row.created_at,
+      })),
       meta: buildPaginationMeta(total, dto),
     };
   }
@@ -177,7 +179,7 @@ export class LikesService {
         id: string;
         title: string;
         galaxy_id: string;
-        owner_id: string;
+        creator_id: string;
         created_at: Date;
         updated_at: Date;
       };
@@ -271,7 +273,7 @@ export class LikesService {
         id: true,
         title: true,
         galaxy_id: true,
-        owner_id: true,
+        creator_id: true,
         created_at: true,
         updated_at: true,
       },
@@ -289,7 +291,14 @@ export class LikesService {
         };
       })
       .filter(Boolean) as Array<{
-      system: any;
+      system: {
+        id: string;
+        title: string;
+        galaxy_id: string;
+        creator_id: string;
+        created_at: Date;
+        updated_at: Date;
+      };
       like_count: number;
       rank: number;
     }>;
