@@ -10,6 +10,9 @@ import {
   IsEnum,
   MaxLength,
   IsBoolean,
+  IsNumber,
+  Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -25,6 +28,9 @@ export class PlanetPropertiesDto {
     maximum: 100,
     example: 50,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   size: number;
 
   @ApiProperty({
@@ -33,6 +39,9 @@ export class PlanetPropertiesDto {
     maximum: 360,
     example: 180,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(360)
   color: number;
 
   @ApiProperty({
@@ -42,6 +51,9 @@ export class PlanetPropertiesDto {
     maximum: 100,
     example: 75,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   brightness: number;
 
   @ApiProperty({
@@ -50,6 +62,9 @@ export class PlanetPropertiesDto {
     maximum: 100,
     example: 10,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   distance: number;
 
   @ApiProperty({
@@ -58,6 +73,9 @@ export class PlanetPropertiesDto {
     maximum: 100,
     example: 50,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   speed: number;
 
   @ApiProperty({
@@ -66,6 +84,9 @@ export class PlanetPropertiesDto {
     maximum: 90,
     example: 0,
   })
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
   tilt: number;
 
   @ApiProperty({
@@ -74,6 +95,9 @@ export class PlanetPropertiesDto {
     maximum: 100,
     example: 30,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   spin: number;
 
   @ApiProperty({
@@ -82,6 +106,9 @@ export class PlanetPropertiesDto {
     maximum: 100,
     example: 45,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   eccentricity: number;
 
   @ApiProperty({
@@ -90,6 +117,9 @@ export class PlanetPropertiesDto {
     maximum: 90,
     example: 0,
   })
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
   elevation: number;
 
   @ApiProperty({
@@ -98,6 +128,9 @@ export class PlanetPropertiesDto {
     maximum: 360,
     example: 0,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(360)
   phase: number;
 
   // === 확장 속성 (프론트엔드 호환) ===
@@ -107,6 +140,10 @@ export class PlanetPropertiesDto {
     maximum: 1.0,
     example: 0.5,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(0.01)
+  @Max(1.0)
   planetSize?: number;
 
   @ApiPropertyOptional({
@@ -115,6 +152,10 @@ export class PlanetPropertiesDto {
     maximum: 360,
     example: 180,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(360)
   planetColor?: number;
 
   @ApiPropertyOptional({
@@ -123,6 +164,10 @@ export class PlanetPropertiesDto {
     maximum: 5.0,
     example: 2.65,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(0.3)
+  @Max(5.0)
   planetBrightness?: number;
 
   @ApiPropertyOptional({
@@ -131,6 +176,10 @@ export class PlanetPropertiesDto {
     maximum: 20.0,
     example: 10.5,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(1.0)
+  @Max(20.0)
   distanceFromStar?: number;
 
   @ApiPropertyOptional({
@@ -139,6 +188,10 @@ export class PlanetPropertiesDto {
     maximum: 1.0,
     example: 0.5,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(0.01)
+  @Max(1.0)
   orbitSpeed?: number;
 
   @ApiPropertyOptional({
@@ -147,6 +200,10 @@ export class PlanetPropertiesDto {
     maximum: 1.0,
     example: 0.5,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(0.01)
+  @Max(1.0)
   rotationSpeed?: number;
 
   @ApiPropertyOptional({
@@ -155,6 +212,10 @@ export class PlanetPropertiesDto {
     maximum: 180,
     example: 0,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
   inclination?: number;
 
   @ApiPropertyOptional({
@@ -163,6 +224,10 @@ export class PlanetPropertiesDto {
     maximum: 7,
     example: 0,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(7)
   oscillatorType?: number;
 
   @ApiPropertyOptional({
@@ -171,6 +236,10 @@ export class PlanetPropertiesDto {
     maximum: 30.0,
     example: 1.0,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(0.1)
+  @Max(30.0)
   filterResonance?: number;
 
   @ApiPropertyOptional({
@@ -179,6 +248,10 @@ export class PlanetPropertiesDto {
     maximum: 100,
     example: 50,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   spatialDepth?: number;
 
   @ApiPropertyOptional({
@@ -187,6 +260,10 @@ export class PlanetPropertiesDto {
     maximum: 100,
     example: 50,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   patternComplexity?: number;
 
   @ApiPropertyOptional({
@@ -195,6 +272,10 @@ export class PlanetPropertiesDto {
     maximum: 100,
     example: 50,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   rhythmDensity?: number;
 
   @ApiPropertyOptional({
@@ -203,6 +284,10 @@ export class PlanetPropertiesDto {
     maximum: 100,
     example: 50,
   })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   melodicVariation?: number;
 }
 
@@ -300,6 +385,13 @@ export class PlanetResponseDto {
 
   @ApiProperty({ description: '행성 이름' })
   name: string;
+
+  @ApiProperty({
+    description: '객체 타입 (항상 PLANET)',
+    enum: ['STAR', 'PLANET'],
+    example: 'PLANET',
+  })
+  object_type: string;
 
   @ApiProperty({
     description: '악기 역할',

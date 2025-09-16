@@ -4,7 +4,7 @@ import {
   OnModuleInit,
   OnModuleDestroy,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 /**
  * Prisma 데이터베이스 연결을 관리하는 서비스
@@ -47,9 +47,21 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.client.notification;
   }
 
-  // 트랜잭션 접근자
-  get $transaction() {
-    return this.client.$transaction.bind(this.client);
+  // 트랜잭션: 콜백/배치(Array) 양쪽 오버로드 모두 지원
+  $transaction<R>(fn: (tx: Prisma.TransactionClient) => Promise<R>): Promise<R>;
+  $transaction<T extends Prisma.PrismaPromise<unknown>[]>(
+    requests: [...T]
+  ): Promise<{ [K in keyof T]: Awaited<T[K]> }>;
+  $transaction(
+    arg:
+      | ((tx: Prisma.TransactionClient) => Promise<unknown>)
+      | Prisma.PrismaPromise<unknown>[]
+  ): Promise<unknown> {
+    if (typeof arg === 'function') {
+      const fn = arg as (tx: Prisma.TransactionClient) => Promise<unknown>;
+      return this.client.$transaction(fn);
+    }
+    return this.client.$transaction(arg);
   }
 
   async onModuleInit(): Promise<void> {

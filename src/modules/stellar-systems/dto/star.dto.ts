@@ -7,6 +7,9 @@ import {
   IsOptional,
   IsObject,
   ValidateNested,
+  IsNumber,
+  Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -20,6 +23,9 @@ export class StarPropertiesDto {
     maximum: 100,
     example: 50,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   spin: number;
 
   @ApiProperty({
@@ -29,6 +35,9 @@ export class StarPropertiesDto {
     maximum: 100,
     example: 75,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   brightness: number;
 
   @ApiProperty({
@@ -37,6 +46,9 @@ export class StarPropertiesDto {
     maximum: 360,
     example: 60,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(360)
   color: number;
 
   @ApiProperty({
@@ -45,6 +57,9 @@ export class StarPropertiesDto {
     maximum: 100,
     example: 50,
   })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   size: number;
 }
 
@@ -90,6 +105,16 @@ export class StarResponseDto {
 
   @ApiProperty({ description: '스텔라 시스템 ID' })
   system_id: string;
+
+  @ApiProperty({ description: '항성 이름', example: 'Central Star' })
+  name: string;
+
+  @ApiProperty({
+    description: '객체 타입 (항상 STAR)',
+    enum: ['STAR', 'PLANET'],
+    example: 'STAR',
+  })
+  object_type: string;
 
   @ApiProperty({
     description: '항성 속성',
