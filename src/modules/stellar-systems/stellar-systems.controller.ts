@@ -16,6 +16,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiBody,
 } from '@nestjs/swagger';
 import {
   CreateStellarSystemDto,
@@ -33,7 +34,7 @@ export class StellarSystemController {
   /**
    * 새로운 스텔라 시스템 생성 (항성 자동 생성 포함)
    * - 인증 필요
-   * - 스텔라 시스템과 항성이 동시에 생성됩니다
+   * - 스텔라 시스템과 항성이 동시에 생성되며, 초기 행성들도 함께 생성할 수 있습니다
    */
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -41,7 +42,39 @@ export class StellarSystemController {
   @ApiOperation({
     summary: '스텔라 시스템 생성',
     description:
-      '새로운 스텔라 시스템을 생성합니다. 항성은 자동으로 생성되며 삭제할 수 없습니다.',
+      '새로운 스텔라 시스템을 생성합니다. 항성은 자동으로 생성되며, 초기 행성들도 함께 생성할 수 있습니다.\n\n주의: 본 API(POST)와 수정 API(PUT)는 동일한 바디 구조를 사용합니다. PUT에서는 name/star/planets 중 제공된 필드만 반영됩니다.',
+  })
+  @ApiBody({
+    description: '생성 요청 바디 예시',
+    type: CreateStellarSystemDto,
+    examples: {
+      default: {
+        summary: '기본 생성 예시',
+        value: {
+          name: 'My First System',
+          galaxy_id: 'gal_abc123',
+          star: { spin: 50, brightness: 75, color: 60, size: 50 },
+          planets: [
+            {
+              name: 'Rhythm Planet',
+              role: 'DRUM',
+              properties: {
+                size: 50,
+                color: 180,
+                brightness: 75,
+                distance: 10,
+                speed: 50,
+                tilt: 0,
+                spin: 30,
+                eccentricity: 45,
+                elevation: 0,
+                phase: 0,
+              },
+            },
+          ],
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 201,
@@ -147,6 +180,55 @@ export class StellarSystemController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '스텔라 시스템 수정' })
+  @ApiBody({
+    description:
+      '수정 요청 바디 예시 (POST와 동일한 구조를 사용합니다. name/star/planets 중 제공된 필드만 반영됩니다).',
+    type: UpdateStellarSystemDto,
+    examples: {
+      full: {
+        summary: '전체 편집 예시',
+        value: {
+          name: 'Updated System',
+          star: { spin: 62, brightness: 70, color: 220, size: 60 },
+          planets: [
+            {
+              id: 'pln_abc123',
+              name: 'Kick',
+              role: 'DRUM',
+              properties: {
+                size: 35,
+                color: 20,
+                brightness: 80,
+                distance: 5,
+                speed: 70,
+                tilt: 10,
+                spin: 40,
+                eccentricity: 15,
+                elevation: 0,
+                phase: 0,
+              },
+            },
+            {
+              name: 'Bass One',
+              role: 'BASS',
+              properties: {
+                size: 60,
+                color: 120,
+                brightness: 50,
+                distance: 8,
+                speed: 40,
+                tilt: 0,
+                spin: 20,
+                eccentricity: 10,
+                elevation: -1,
+                phase: 0.25,
+              },
+            },
+          ],
+        },
+      },
+    },
+  })
   @ApiResponse({
     status: 200,
     description: '수정 성공',
