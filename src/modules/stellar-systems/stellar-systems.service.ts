@@ -33,7 +33,6 @@ export class StellarSystemService {
     // userId 검증 (인증 실패 시 대응)
 
     if (!userId) {
-      console.log('[StellarSystemService] Forbidden: userId is missing', { userId, dto });
       throw new ForbiddenException('로그인이 필요합니다.');
     }
 
@@ -44,7 +43,6 @@ export class StellarSystemService {
     });
 
     if (!galaxy) {
-      console.log('[StellarSystemService] NotFound: galaxy not found', { galaxyId: dto.galaxy_id, dto });
       throw new NotFoundException('해당 갤럭시를 찾을 수 없습니다.');
     }
 
