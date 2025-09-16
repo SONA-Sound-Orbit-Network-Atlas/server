@@ -165,6 +165,16 @@ export class UsersController {
     description: '회원 탈퇴 성공',
   })
   @ApiResponse({
+    status: 400,
+    description: '검증 실패',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
     status: 404,
     description: '사용자를 찾을 수 없음',
     type: ErrorResponseDto,
@@ -172,11 +182,6 @@ export class UsersController {
   @ApiResponse({
     status: 409,
     description: '비밀번호 불일치',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: '인증 실패',
     type: ErrorResponseDto,
   })
   async deleteAccount(
