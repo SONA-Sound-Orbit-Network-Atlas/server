@@ -21,12 +21,6 @@ import { StarPropertiesDto } from './dto/star.dto';
 import { PlanetPropertiesDto } from './dto/planet.dto';
 import { InstrumentRole } from './dto/common.dto';
 
-// Prisma.TransactionClient 타입을 명시적으로 사용하기 위한 타입 정의
-type TransactionClient = Omit<
-  PrismaClient,
-  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
->;
-
 @Injectable()
 export class StellarSystemService {
   constructor(private readonly prisma: PrismaService) {}
@@ -38,7 +32,7 @@ export class StellarSystemService {
    */
   async createStellarSystem(
     userId: string,
-    dto: CreateStellarSystemDto,
+    dto: CreateStellarSystemDto
   ): Promise<StellarSystemResponseDto> {
     // 갤럭시 존재 및 소유자 확인
     const galaxy = await this.prisma.galaxy.findUnique({
@@ -54,8 +48,8 @@ export class StellarSystemService {
       throw new ForbiddenException('이 갤럭시에 대한 권한이 없습니다.');
     }
 
-    const result = await this.prisma.$transaction(
-      async (tx: TransactionClient) => {
+    const result = (await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
         // 1. 스텔라 시스템 생성 (스키마의 모든 필수 필드 포함)
         const system = await tx.stellarSystem.create({
           data: {
@@ -78,17 +72,21 @@ export class StellarSystemService {
           ...dto.star_properties, // 사용자 제공 속성으로 덮어쓰기
         };
 
+        // 타입 안전한 변환 헬퍼 사용
+        const starPropertiesJson = this.convertToJsonObject(
+          defaultStarProperties
+        );
         const star = await tx.star.create({
           data: {
             system_id: system.id,
-            properties: defaultStarProperties as unknown as Prisma.JsonObject,
+            properties: starPropertiesJson,
           },
         });
 
         // 3. 생성된 시스템과 항성 정보 반환
         return this.mapToStellarSystemResponseDto(system, star, []);
-      },
-    );
+      }
+    )) as StellarSystemResponseDto;
 
     return result;
   }
@@ -98,7 +96,7 @@ export class StellarSystemService {
    */
   async getStellarSystem(
     id: string,
-    userId: string,
+    userId: string
   ): Promise<StellarSystemResponseDto> {
     const system = await this.prisma.stellarSystem.findUnique({
       where: { id },
@@ -121,7 +119,7 @@ export class StellarSystemService {
     return this.mapToStellarSystemResponseDto(
       system,
       system.star,
-      system.planets,
+      system.planets
     );
   }
 
@@ -133,7 +131,7 @@ export class StellarSystemService {
    */
   async cloneStellarSystem(
     userId: string,
-    dto: CloneStellarSystemDto,
+    dto: CloneStellarSystemDto
   ): Promise<StellarSystemResponseDto> {
     // 원본 시스템 확인
     const sourceSystem = await this.prisma.stellarSystem.findUnique({
@@ -163,8 +161,8 @@ export class StellarSystemService {
     }
 
     // 트랜잭션으로 시스템, 항성, 행성 모두 클론
-    const result = await this.prisma.$transaction(
-      async (tx: TransactionClient) => {
+    const result = (await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
         // 1. 새 스텔라 시스템 생성 (클론)
         const clonedSystem = await tx.stellarSystem.create({
           data: {
@@ -187,8 +185,11 @@ export class StellarSystemService {
             data: {
               system_id: clonedSystem.id,
               name: sourceSystem.star.name,
-              properties:
-                sourceSystem.star.properties as unknown as Prisma.JsonObject,
+              properties: this.convertToJsonObject(
+                this.convertFromJsonValue<StarPropertiesDto>(
+                  sourceSystem.star.properties
+                )
+              ),
             },
           });
         }
@@ -202,8 +203,11 @@ export class StellarSystemService {
               name: planet.name,
               instrument_role: planet.instrument_role,
               is_active: planet.is_active,
-              properties:
-                planet.properties as unknown as Prisma.JsonObject,
+              properties: this.convertToJsonObject(
+                this.convertFromJsonValue<PlanetPropertiesDto>(
+                  planet.properties
+                )
+              ),
             },
           });
           clonedPlanets.push(clonedPlanet);
@@ -213,10 +217,10 @@ export class StellarSystemService {
         return this.mapToStellarSystemResponseDto(
           clonedSystem,
           clonedStar,
-          clonedPlanets,
+          clonedPlanets
         );
-      },
-    );
+      }
+    )) as StellarSystemResponseDto;
 
     return result;
   }
@@ -227,7 +231,7 @@ export class StellarSystemService {
   async updateStellarSystem(
     id: string,
     userId: string,
-    dto: UpdateStellarSystemDto,
+    dto: UpdateStellarSystemDto
   ): Promise<StellarSystemResponseDto> {
     // 소유자 확인
     const system = await this.prisma.stellarSystem.findUnique({
@@ -259,7 +263,7 @@ export class StellarSystemService {
     return this.mapToStellarSystemResponseDto(
       updatedSystem,
       updatedSystem.star,
-      updatedSystem.planets,
+      updatedSystem.planets
     );
   }
 
@@ -302,7 +306,7 @@ export class StellarSystemService {
   private mapToStellarSystemResponseDto(
     system: StellarSystem,
     star: Star | null,
-    planets: Planet[],
+    planets: Planet[]
   ): StellarSystemResponseDto {
     return {
       id: system.id,
@@ -317,7 +321,9 @@ export class StellarSystemService {
         ? {
             id: star.id,
             system_id: star.system_id,
-            properties: star.properties as unknown as StarPropertiesDto,
+            properties: this.convertFromJsonValue<StarPropertiesDto>(
+              star.properties
+            ),
             created_at: star.created_at,
             updated_at: star.updated_at,
           }
@@ -326,13 +332,36 @@ export class StellarSystemService {
         id: planet.id,
         system_id: planet.system_id,
         name: planet.name,
-        role: planet.instrument_role as InstrumentRole, // instrument_role을 role로 매핑
-        properties: planet.properties as unknown as PlanetPropertiesDto,
+        role: planet.instrument_role as InstrumentRole,
+        properties: this.convertFromJsonValue<PlanetPropertiesDto>(
+          planet.properties
+        ),
         created_at: planet.created_at,
         updated_at: planet.updated_at,
       })),
       created_at: system.created_at,
       updated_at: system.updated_at,
     };
+  }
+
+  /**
+   * DTO 객체를 Prisma JsonObject로 안전하게 변환하는 헬퍼 메서드
+   */
+  private convertToJsonObject<T extends Record<string, any>>(
+    dto: T
+  ): Prisma.JsonObject {
+    const jsonString = JSON.stringify(dto);
+    const parsedObject = JSON.parse(jsonString);
+    return parsedObject as Prisma.JsonObject;
+  }
+
+  /**
+   * Prisma JsonValue를 특정 DTO 타입으로 안전하게 변환하는 헬퍼 메서드
+   */
+  private convertFromJsonValue<T>(jsonValue: Prisma.JsonValue): T {
+    if (jsonValue === null || jsonValue === undefined) {
+      throw new Error('JSON 데이터가 null 또는 undefined입니다.');
+    }
+    return jsonValue as T;
   }
 }
