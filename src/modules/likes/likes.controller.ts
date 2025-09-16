@@ -6,6 +6,8 @@ import {
   Param,
   Post,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { LikesService } from './likes.service';
 import {
@@ -17,12 +19,12 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { User } from '../../auth/decorator/user.decorator';
 import { LikeTargetDto, RangkType } from './dto/likes.dto';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { OptionalJwtAuthGuard } from '../../auth/optional-jwt.guard';
 
 @ApiTags('좋아요 정보 관리')
 @Controller('likes')
@@ -136,7 +138,7 @@ export class LikesController {
     return this.likesService.unlikeSystem(userId, dto);
   }
 
-  /** 내가 좋아요 한 항성계 목록 조회 */
+  /** 내가 좋아요 한 항성계 목록 조회 (보호) */
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -162,11 +164,7 @@ export class LikesController {
                         example: '켄타우루스 자리 알파',
                       },
                       galaxy_id: { type: 'string', example: 'gal_001' },
-                      owner_id: { type: 'string', example: 'usr_owner_01' },
-                      created_by_id: {
-                        type: 'string',
-                        example: 'usr_owner_01',
-                      },
+                      creator_id: { type: 'string', example: 'usr_owner_01' },
                       created_at: {
                         type: 'string',
                         format: 'date-time',
@@ -208,8 +206,7 @@ export class LikesController {
                     id: 'sys_123',
                     title: '켄타우루스 자리 알파',
                     galaxy_id: 'gal_001',
-                    owner_id: 'usr_owner_01',
-                    created_by_id: 'usr_owner_01',
+                    creator_id: 'usr_owner_01',
                     created_at: '2025-09-10T08:30:00.000Z',
                     updated_at: '2025-09-12T15:45:00.000Z',
                   },
@@ -252,12 +249,33 @@ export class LikesController {
     return this.likesService.getMyLikes(userId, pagination);
   }
 
+  /** 내가 좋아요 한 항성계 개수 조회 (보호) */
+  @Get('me/count')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '내가 좋아요 한 항성계 개수 조회' })
+  @ApiOkResponse({
+    description: '내가 좋아요 한 항성계 수',
+    content: {
+      'application/json': {
+        schema: { type: 'integer', example: 17 },
+        example: 17,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  async getMyLikedSystemsCount(@User('id') userId: string) {
+    return this.likesService.countMyLikedSystems(userId);
+  }
+
   /**
-   * 좋아요 랭킹 (이번 주/이번 달/올해/랜덤)
-   * - 비로그인도 호출 가능
-   * - rank_type: week|month|year|random
-   * - page/limit: PaginationDto 공통 규격
+   * 좋아요 랭킹 (이번 주/이번 달/올해/랜덤) — 공개
    */
+
   @Get('rankings')
   @ApiOperation({
     summary: '좋아요 랭킹 조회 (주/월/년/랜덤)',
@@ -291,7 +309,7 @@ export class LikesController {
                       id: { type: 'string', example: 'sys_987' },
                       title: { type: 'string', example: '안드로메다-7' },
                       galaxy_id: { type: 'string', example: 'gal_777' },
-                      owner_id: { type: 'string', example: 'usr_999' },
+                      creator_id: { type: 'string', example: 'usr_999' },
                       created_at: {
                         type: 'string',
                         format: 'date-time',
@@ -327,7 +345,7 @@ export class LikesController {
                 id: 'sys_987',
                 title: '안드로메다-7',
                 galaxy_id: 'gal_777',
-                owner_id: 'usr_999',
+                creator_id: 'usr_999',
                 created_at: '2025-08-01T00:00:00.000Z',
                 updated_at: '2025-09-10T00:00:00.000Z',
               },
@@ -340,7 +358,7 @@ export class LikesController {
                 id: 'sys_654',
                 title: '페가수스-3',
                 galaxy_id: 'gal_222',
-                owner_id: 'usr_555',
+                creator_id: 'usr_555',
                 created_at: '2025-07-11T00:00:00.000Z',
                 updated_at: '2025-09-09T00:00:00.000Z',
               },
@@ -354,36 +372,16 @@ export class LikesController {
       },
     },
   })
+  @UseGuards(OptionalJwtAuthGuard)
   async getLikeRankings(
+    @Req() req: any,
     @Query() dto: PaginationDto & { rangk_type?: RangkType }
   ) {
-    return this.likesService.getLikeRankings(dto);
+    const viewerId: string | undefined = req.user?.id; // 로그인 안 했으면 undefined
+    return this.likesService.getLikeRankings(dto, viewerId);
   }
 
-  /** 내가 좋아요 한 항성계 개수 조회 */
-  @Get('me/count')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: '내가 좋아요 한 항성계 개수 조회' })
-  @ApiOkResponse({
-    description: '내가 좋아요 한 항성계 수',
-    content: {
-      'application/json': {
-        schema: { type: 'integer', example: 17 },
-        example: 17,
-      },
-    },
-  })
-  @ApiResponse({
-    status: 401,
-    description: '인증 실패',
-    type: ErrorResponseDto,
-  })
-  async getMyLikedSystemsCount(@User('id') userId: string) {
-    return this.likesService.countMyLikedSystems(userId);
-  }
-
-  /** 좋아요 랭킹  */
+  /** 전체(올타임) 좋아요 Top 랭킹 — 공개 */
   @Get('rankings-top')
   @ApiOperation({ summary: '전체(올타임) 좋아요 Top 랭킹' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
@@ -406,7 +404,7 @@ export class LikesController {
                       id: { type: 'string', example: 'sys_TOP1' },
                       title: { type: 'string', example: '오리온-프라임' },
                       galaxy_id: { type: 'string', example: 'gal_TOP' },
-                      owner_id: { type: 'string', example: 'usr_AAA' },
+                      creator_id: { type: 'string', example: 'usr_AAA' },
                       created_at: {
                         type: 'string',
                         format: 'date-time',
@@ -442,7 +440,7 @@ export class LikesController {
                 id: 'sys_TOP1',
                 title: '오리온-프라임',
                 galaxy_id: 'gal_TOP',
-                owner_id: 'usr_AAA',
+                creator_id: 'usr_AAA',
                 created_at: '2025-01-01T00:00:00.000Z',
                 updated_at: '2025-09-14T00:00:00.000Z',
               },
@@ -456,12 +454,15 @@ export class LikesController {
       },
     },
   })
-  async getTopLiked(@Query() dto: PaginationDto) {
-    return this.likesService.getTopLikedSystems(dto);
+  @UseGuards(OptionalJwtAuthGuard)
+  async getTopLiked(@Req() req: any, @Query() dto: PaginationDto) {
+    const viewerId: string | undefined = req.user?.id;
+    return this.likesService.getTopLikedSystems(dto, viewerId);
   }
 
   /**
-   * 특정 사용자가 좋아요 누른 항성계 목록 조회
+   * 특정 사용자가 좋아요 누른 항성계 목록 조회 — 공개
+   * (정적 라우트들 아래에 배치해서 충돌 방지)
    */
   @Get(':userId')
   @ApiOperation({ summary: '특정 사용자가 좋아요 누른 항성계 목록 조회' })
@@ -483,8 +484,7 @@ export class LikesController {
                       id: { type: 'string', example: 'sys_777' },
                       title: { type: 'string', example: '카시오페이아-β' },
                       galaxy_id: { type: 'string', example: 'gal_900' },
-                      owner_id: { type: 'string', example: 'usr_XYZ' },
-                      created_by_id: { type: 'string', example: 'usr_XYZ' },
+                      creator_id: { type: 'string', example: 'usr_XYZ' },
                       created_at: {
                         type: 'string',
                         format: 'date-time',
@@ -523,8 +523,7 @@ export class LikesController {
                 id: 'sys_777',
                 title: '카시오페이아-β',
                 galaxy_id: 'gal_900',
-                owner_id: 'usr_XYZ',
-                created_by_id: 'usr_XYZ',
+                creator_id: 'usr_XYZ',
                 created_at: '2025-05-01T00:00:00.000Z',
                 updated_at: '2025-08-31T00:00:00.000Z',
               },
