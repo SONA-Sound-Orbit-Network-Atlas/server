@@ -344,7 +344,7 @@ export class FollowsController {
   @Get('me/followers')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '나를 팔로워 목록' })
+  @ApiOperation({ summary: '나의 팔로워 목록' })
   @ApiQuery({
     name: 'page',
     required: false,
@@ -421,6 +421,26 @@ export class FollowsController {
       },
     },
   })
+  @ApiUnauthorizedResponse({
+    description: '인증 실패',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            statusCode: { type: 'integer' },
+            message: { type: 'string' },
+            error: { type: 'string' },
+          },
+        },
+        example: {
+          statusCode: 401,
+          message: '인증이 필요합니다.',
+          error: 'Unauthorized',
+        },
+      },
+    },
+  })
   async getMyFollowers(@User('id') me: string, @Query() q: PaginationDto) {
     return this.followsService.getFollowers(me, q);
   }
@@ -431,7 +451,7 @@ export class FollowsController {
   @Get('me/followings')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '내가 팔로잉하는 사람들 목록' })
+  @ApiOperation({ summary: '나의 팔로잉 목록' })
   @ApiQuery({
     name: 'page',
     required: false,
@@ -500,6 +520,26 @@ export class FollowsController {
             summary: '빈 결과',
             value: { meta: { page: 1, limit: 20, total: 0 }, items: [] },
           },
+        },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: '인증 실패',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            statusCode: { type: 'integer' },
+            message: { type: 'string' },
+            error: { type: 'string' },
+          },
+        },
+        example: {
+          statusCode: 401,
+          message: '인증이 필요합니다.',
+          error: 'Unauthorized',
         },
       },
     },
