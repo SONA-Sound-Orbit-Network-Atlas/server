@@ -9,11 +9,48 @@ import {
   ValidateNested,
   MaxLength,
   IsArray,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  Validate,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { StarPropertiesDto, StarResponseDto } from './star.dto';
 import { PlanetResponseDto } from './planet.dto';
+
+// Position 범위 검증을 위한 커스텀 validator
+// x: ±1000, y: ±20, z: ±1000
+@ValidatorConstraint({ name: 'position', async: false })
+export class IsValidPosition implements ValidatorConstraintInterface {
+  validate(position: any): boolean {
+    // position이 배열이고 정확히 3개 요소를 가져야 함
+    if (!Array.isArray(position) || position.length !== 3) {
+      return false;
+    }
+
+    const [x, y, z] = position as [unknown, unknown, unknown];
+
+    // 각 요소가 숫자여야 함
+    if (
+      typeof x !== 'number' ||
+      typeof y !== 'number' ||
+      typeof z !== 'number'
+    ) {
+      return false;
+    }
+
+    // 범위 검증: x: ±1000, y: ±20, z: ±1000
+    if (x < -1000 || x > 1000) return false;
+    if (y < -20 || y > 20) return false;
+    if (z < -1000 || z > 1000) return false;
+
+    return true;
+  }
+
+  defaultMessage(): string {
+    return 'Position must be [x, y, z] where x: ±1000, y: ±20, z: ±1000';
+  }
+}
 
 // 간편한 행성 생성 정보 DTO (시스템 생성 시 사용)
 export class CreatePlanetForSystemDto {
@@ -82,6 +119,16 @@ export class CreateStellarSystemDto {
   galaxy_id: string;
 
   @ApiPropertyOptional({
+    description: '갤럭시 내 위치 좌표 [x, y, z] (x: ±1000, y: ±20, z: ±1000)',
+    type: [Number],
+    example: [10.5, -5.2, 0],
+  })
+  @IsOptional()
+  @IsArray()
+  @Validate(IsValidPosition)
+  position?: number[];
+
+  @ApiPropertyOptional({
     description: '항성 정보 (선택적, 미제공 시 기본값 사용)',
     type: StarPropertiesDto,
     example: {
@@ -137,6 +184,16 @@ export class UpdateStellarSystemDto {
   @IsString()
   @MaxLength(100)
   title?: string;
+
+  @ApiPropertyOptional({
+    description: '갤럭시 내 위치 좌표 [x, y, z] (x: ±1000, y: ±20, z: ±1000)',
+    type: [Number],
+    example: [15.0, 2.5, -1.0],
+  })
+  @IsOptional()
+  @IsArray()
+  @Validate(IsValidPosition)
+  position?: number[];
 
   @ApiPropertyOptional({
     description: '스텔라 시스템 설명',
@@ -197,6 +254,17 @@ export class CloneStellarSystemDto {
   galaxy_id: string;
 
   @ApiPropertyOptional({
+    description:
+      '클론된 시스템의 새로운 위치 좌표 [x, y, z] (x: ±1000, y: ±20, z: ±1000). 미제공 시 랜덤 위치로 생성',
+    type: [Number],
+    example: [100.5, -10.2, 500.0],
+  })
+  @IsOptional()
+  @IsArray()
+  @Validate(IsValidPosition)
+  position?: number[];
+
+  @ApiPropertyOptional({
     description: '새로운 시스템 설명',
     example: 'Cloned from original system',
   })
@@ -216,6 +284,13 @@ export class StellarSystemResponseDto {
 
   @ApiProperty({ description: '소속 갤럭시 ID' })
   galaxy_id: string;
+
+  @ApiProperty({
+    description: '갤럭시 내 위치 좌표 [x, y, z]',
+    type: [Number],
+    example: [10.5, -5.2, 0],
+  })
+  position: number[];
 
   @ApiProperty({ description: '현재 소유자 ID' })
   creator_id: string;

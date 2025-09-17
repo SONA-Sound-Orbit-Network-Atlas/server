@@ -149,13 +149,77 @@ export class StellarSystemController {
     return this.stellarSystemService.cloneStellarSystem(userId, cloneDto);
   }
 
+      /**
+   * 갤럭시 내 스텔라 시스템 전체 조회 (간소 정보)
+   * 비회원도 조회 가능
+   */
+  @Get('galaxy/:galaxyId/systems')
+  @ApiOperation({
+    summary: '갤럭시 내 스텔라 시스템 전체 조회',
+    description:
+      '특정 갤럭시에 속한 모든 스텔라 시스템의 간소 정보를 조회합니다. 인증이 필요하지 않습니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '조회 성공',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: '스텔라 시스템 ID' },
+          title: { type: 'string', description: '스텔라 시스템 이름' },
+          position: {
+            type: 'array',
+            items: { type: 'number' },
+            description: '갤럭시 내 위치 좌표 [x, y, z]',
+            example: [10.5, -5.2, 0],
+          },
+          color: {
+            type: 'number',
+            description: '항성 색상 값 (hue)',
+            example: 180,
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '갤럭시를 찾을 수 없음',
+    type: ErrorResponseDto,
+  })
+  async getGalaxyStellarSystems(@Param('galaxyId') galaxyId: string): Promise<
+    Array<{
+      id: string;
+      title: string;
+      position: number[];
+      color: number;
+    }>
+  > {
+    return await this.stellarSystemService.getGalaxyStellarSystems(galaxyId);
+  }
+
   /**
    * 스텔라 시스템 조회 (항성 및 행성 포함)
+   * 비회원도 조회 가능
    */
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: '스텔라 시스템 조회 (항성 및 행성 포함)' })
+  @ApiOperation({
+    summary: '스텔라 시스템 조회 (항성 및 행성 포함)',
+    description:
+      '스텔라 시스템을 조회합니다. 인증이 필요하지 않으며 누구나 조회할 수 있습니다.',
+  })
+
+  /**
+   * 스텔라 시스템 조회 (항성 및 행성 포함)
+   * 비회원도 조회 가능
+   */
+  @Get(':id')
+  @ApiOperation({ 
+    summary: '스텔라 시스템 조회 (항성 및 행성 포함)',
+    description: '스텔라 시스템을 조회합니다. 인증이 필요하지 않으며 누구나 조회할 수 있습니다.'
+  })
   @ApiResponse({
     status: 200,
     description: '조회 성공',
@@ -166,16 +230,10 @@ export class StellarSystemController {
     description: '스텔라 시스템을 찾을 수 없음',
     type: ErrorResponseDto,
   })
-  @ApiResponse({
-    status: 403,
-    description: '시스템에 대한 권한 없음',
-    type: ErrorResponseDto,
-  })
   async getStellarSystem(
-    @Param('id') id: string,
-    @User('userId') userId: string
+    @Param('id') id: string
   ): Promise<StellarSystemResponseDto> {
-    return this.stellarSystemService.getStellarSystem(id, userId);
+    return this.stellarSystemService.getStellarSystem(id);
   }
 
   /**
