@@ -16,6 +16,10 @@ type FollowUserSummary = {
   isMutual: boolean;
 };
 
+function makeMeta(total: number, page: number, limit: number) {
+  return { page, limit, total };
+}
+
 @Injectable()
 export class FollowsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -80,9 +84,9 @@ export class FollowsService {
    * 팔로워 목록 (나를 팔로우하는 사람들)
    * - followee_id = userId
    */
-  async getFollowers(userId: string, pagenationDto: PaginationDto) {
-    const page = Math.max(1, Number(pagenationDto.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(pagenationDto.limit) || 20));
+  async getFollowers(userId: string, paginationDto: PaginationDto) {
+    const page = Math.max(1, Number(paginationDto.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(paginationDto.limit) || 20));
     const skip = (page - 1) * limit;
 
     const [followers, myFollowings] = await this.prisma.$transaction([
@@ -103,7 +107,6 @@ export class FollowsService {
           },
         },
       }),
-      // 내가 팔로우한 대상들(id) → 맞팔 판단용
       this.prisma.follow.findMany({
         where: { follower_id: userId },
         select: { followee_id: true },
@@ -112,28 +115,28 @@ export class FollowsService {
 
     const myFollowingSet = new Set(myFollowings.map(f => f.followee_id));
 
-    const items: FollowUserSummary[] = followers.map(f => ({
-      ...f.follower,
+    const items = followers.map<FollowUserSummary>(f => ({
+      id: f.follower.id,
+      username: f.follower.username,
+      email: f.follower.email,
+      about: f.follower.about ?? null,
+      created_at: f.follower.created_at,
       isMutual: myFollowingSet.has(f.follower.id),
     }));
 
-    const total = await this.prisma.follow.count({
+    const totalCount = await this.prisma.follow.count({
       where: { followee_id: userId },
     });
 
     return {
-      meta: buildPaginationMeta(total, pagenationDto),
+      meta: makeMeta(totalCount, page, limit),
       items,
     };
   }
 
-  /*
-   * 팔로잉 목록 (내가 팔로우하는 사람들)
-   * - follower_id = userId
-   */
-  async getFollowings(userId: string, pagenationDto: PaginationDto) {
-    const page = Math.max(1, Number(pagenationDto.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(pagenationDto.limit) || 20));
+  async getFollowings(userId: string, paginationDto: PaginationDto) {
+    const page = Math.max(1, Number(paginationDto.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(paginationDto.limit) || 20));
     const skip = (page - 1) * limit;
 
     const [followings, followersOfMe] = await this.prisma.$transaction([
@@ -154,7 +157,6 @@ export class FollowsService {
           },
         },
       }),
-      // 내가 팔로우 하는 사람들 (id) -> 맞팔 판단용
       this.prisma.follow.findMany({
         where: { followee_id: userId },
         select: { follower_id: true },
@@ -163,17 +165,21 @@ export class FollowsService {
 
     const followersOfMeSet = new Set(followersOfMe.map(f => f.follower_id));
 
-    const items: FollowUserSummary[] = followings.map(f => ({
-      ...f.followee,
+    const items = followings.map<FollowUserSummary>(f => ({
+      id: f.followee.id,
+      username: f.followee.username,
+      email: f.followee.email,
+      about: f.followee.about ?? null,
+      created_at: f.followee.created_at,
       isMutual: followersOfMeSet.has(f.followee.id),
     }));
 
-    const total = await this.prisma.follow.count({
+    const totalCount = await this.prisma.follow.count({
       where: { follower_id: userId },
     });
 
     return {
-      meta: buildPaginationMeta(total, pagenationDto),
+      meta: makeMeta(totalCount, page, limit),
       items,
     };
   }
