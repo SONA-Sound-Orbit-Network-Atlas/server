@@ -18,15 +18,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 // 항성 속성 DTO (JSONB로 저장)
 // SONA 전역 오디오 제어 파라미터들 (프론트엔드 StarProperties와 일치)
 export class StarPropertiesDto {
-  @ApiPropertyOptional({
-    description: '항성 이름',
-    example: 'Central Star',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  name?: string;
-
   @ApiProperty({
     description: '항성 자전 속도 (전체 BPM 결정: 60-180 BPM)',
     minimum: 0,
@@ -71,6 +62,27 @@ export class StarPropertiesDto {
   @Min(0)
   @Max(100)
   size: number;
+}
+
+// 스텔라 시스템 생성/수정 시 사용하는 Star DTO
+export class StarForSystemDto {
+  @ApiProperty({
+    description: '항성 이름',
+    example: 'Central Star',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  name: string;
+
+  @ApiProperty({
+    description: '항성 속성',
+    type: StarPropertiesDto,
+  })
+  @IsObject()
+  @ValidateNested()
+  @Type(() => StarPropertiesDto)
+  properties: StarPropertiesDto;
 }
 
 // 항성 생성 DTO (시스템 생성 시 내부적으로만 사용)

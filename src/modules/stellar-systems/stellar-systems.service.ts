@@ -12,7 +12,6 @@ import {
   UpdateStellarSystemDto,
   CloneStellarSystemDto,
   StellarSystemResponseDto,
-  MyStellarSystemItemDto,
   MyStellarSystemsResponseDto,
 } from './dto/stellar-system.dto';
 import { StarPropertiesDto } from './dto/star.dto';
@@ -87,25 +86,23 @@ export class StellarSystemService {
         });
 
         // 2. 항성 자동 생성 (기본값 또는 사용자 제공값 사용)
-        const defaultStarProperties: StarPropertiesDto = {
-          name: 'CENTRAL STAR', // 기본 항성 이름
+        const defaultStarName = dto.star?.name || 'CENTRAL STAR';
+        const defaultStarProperties = {
           spin: 50, // BPM 120
           brightness: 75, // Volume 75%
           color: 60, // Key/Scale
           size: 50, // Complexity 2
-          ...dto.star, // 사용자 제공 속성으로 덮어쓰기
+          ...dto.star?.properties, // 사용자 제공 속성으로 덮어쓰기
         };
 
-        // Star name을 분리해서 처리
-        const starName = defaultStarProperties.name || 'CENTRAL STAR';
-        const { name: _, ...starProperties } = defaultStarProperties;
-
         // 타입 안전한 변환 헬퍼 사용
-        const starPropertiesJson = this.convertToJsonObject(starProperties);
+        const starPropertiesJson = this.convertToJsonObject(
+          defaultStarProperties
+        );
         const star = await tx.star.create({
           data: {
             system_id: finalSystem.id,
-            name: starName, // 프론트에서 제공된 이름 또는 기본값
+            name: defaultStarName, // 프론트에서 제공된 이름 또는 기본값
             properties: starPropertiesJson,
           },
         });
@@ -405,7 +402,7 @@ export class StellarSystemService {
         let star: Star | null = await tx.star.findUnique({
           where: { system_id: id },
         });
-        
+
         if (dto.star) {
           if (!star) {
             throw new NotFoundException(
@@ -413,10 +410,11 @@ export class StellarSystemService {
             );
           }
 
-          // Star name을 분리해서 처리
+          // Star name과 properties를 구분하여 처리
+          // name은 DB의 name 필드에, 나머지는 properties JSON 필드에 저장
           const starName = dto.star.name || star.name; // 기존 이름 유지 또는 새 이름 사용
-          const { name: _, ...starPropertiesOnly } = dto.star;
-          
+          const starPropertiesOnly = dto.star.properties;
+
           const starProps = this.convertToJsonObject(starPropertiesOnly);
           star = await tx.star.update({
             where: { system_id: id },
@@ -511,15 +509,6 @@ export class StellarSystemService {
   }
 
   /**
-   * 내가 소유한 스텔라 시스템 개수 조회
-   */
-  async countMyStellarSystems(userId: string): Promise<number> {
-    return this.prisma.stellarSystem.count({
-      where: { creator_id: userId },
-    });
-  }
-
-  /**
    * 내가 소유한 스텔라 시스템 목록 조회 (페이지네이션 지원)
    * - 좋아요 수 기준으로 순위 계산
    * - 행성 개수 계산
@@ -585,15 +574,13 @@ export class StellarSystemService {
     });
 
     // 응답 데이터 구성
-    const data: MyStellarSystemItemDto[] = stellarSystems.map(system => ({
-      system: {
-        id: system.id,
-        title: system.title,
-        galaxy_id: system.galaxy_id,
-        creator_id: system.creator_id,
-        created_at: system.created_at,
-        updated_at: system.updated_at,
-      },
+    const data = stellarSystems.map(system => ({
+      id: system.id,
+      title: system.title,
+      galaxy_id: system.galaxy_id,
+      creator_id: system.creator_id,
+      created_at: system.created_at,
+      updated_at: system.updated_at,
       like_count: system.likes.length,
       planet_count: system.planets.length,
       rank: rankMap.get(system.id) || 0,
