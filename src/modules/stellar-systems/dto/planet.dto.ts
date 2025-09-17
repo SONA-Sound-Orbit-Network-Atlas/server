@@ -21,274 +21,95 @@ import { InstrumentRole } from './common.dto';
 // 행성 속성 DTO (JSONB로 저장)
 // SONA 오디오 제어 파라미터들 - 프론트엔드 PlanetProperties와 완전 호환
 export class PlanetPropertiesDto {
-  // === 기본 SONA 속성 (Tri Hybrid 기반) ===
+  // === 클라이언트와 일치하는 SONA 속성 ===
   @ApiProperty({
     description: '행성 크기 (Size - 음역대 폭과 음정 변화 결정)',
-    minimum: 0,
-    maximum: 100,
-    example: 50,
+    minimum: 0.01,
+    maximum: 1.0,
+    example: 0.35,
   })
   @IsNumber()
-  @Min(0)
-  @Max(100)
-  size: number;
+  @Min(0.01)
+  @Max(1.0)
+  planetSize: number;
 
   @ApiProperty({
     description: '행성 색상 (Color - 오실레이터 웨이브테이블과 음색 특성 결정)',
     minimum: 0,
     maximum: 360,
-    example: 180,
+    example: 15,
   })
   @IsNumber()
   @Min(0)
   @Max(360)
-  color: number;
+  planetColor: number;
 
   @ApiProperty({
     description:
       '행성 밝기 (Brightness - 필터 컷오프, 출력 게인, 레조넌스 결정)',
-    minimum: 0,
-    maximum: 100,
-    example: 75,
-  })
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  brightness: number;
-
-  @ApiProperty({
-    description: '궤도 거리 (Distance - 리버브와 딜레이 효과 결정)',
-    minimum: 0,
-    maximum: 100,
-    example: 10,
-  })
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  distance: number;
-
-  @ApiProperty({
-    description: '궤도 속도 (Speed - 시퀀서 속도와 패턴 밀도 결정)',
-    minimum: 0,
-    maximum: 100,
-    example: 50,
-  })
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  speed: number;
-
-  @ApiProperty({
-    description: '궤도 기울기 (Tilt - 패닝과 스테레오 폭 결정)',
-    minimum: -90,
-    maximum: 90,
-    example: 0,
-  })
-  @IsNumber()
-  @Min(-90)
-  @Max(90)
-  tilt: number;
-
-  @ApiProperty({
-    description: '자전 속도 (Spin - 트레몰로와 코러스 효과 결정)',
-    minimum: 0,
-    maximum: 100,
-    example: 30,
-  })
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  spin: number;
-
-  @ApiProperty({
-    description: '궤도 이심률 (Eccentricity - 스윙과 액센트 결정)',
-    minimum: 0,
-    maximum: 100,
-    example: 45,
-  })
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  eccentricity: number;
-
-  @ApiProperty({
-    description: '궤도 높이 (Elevation - 옥타브와 필터 타입 결정)',
-    minimum: -90,
-    maximum: 90,
-    example: 0,
-  })
-  @IsNumber()
-  @Min(-90)
-  @Max(90)
-  elevation: number;
-
-  @ApiProperty({
-    description: '궤도 위상 (Phase - 패턴 회전과 액센트 게이트 결정)',
-    minimum: 0,
-    maximum: 360,
-    example: 0,
-  })
-  @IsNumber()
-  @Min(0)
-  @Max(360)
-  phase: number;
-
-  // === 확장 속성 (프론트엔드 호환) ===
-  @ApiPropertyOptional({
-    description: '행성 크기 (시각적 표현용)',
-    minimum: 0.01,
-    maximum: 1.0,
-    example: 0.5,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0.01)
-  @Max(1.0)
-  planetSize?: number;
-
-  @ApiPropertyOptional({
-    description: '행성 색상 (시각적 표현용, 0-360도)',
-    minimum: 0,
-    maximum: 360,
-    example: 180,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(360)
-  planetColor?: number;
-
-  @ApiPropertyOptional({
-    description: '행성 밝기 (시각적 표현용)',
     minimum: 0.3,
     maximum: 5.0,
-    example: 2.65,
+    example: 3.8,
   })
-  @IsOptional()
   @IsNumber()
   @Min(0.3)
   @Max(5.0)
-  planetBrightness?: number;
+  planetBrightness: number;
 
-  @ApiPropertyOptional({
-    description: '항성으로부터 거리 (궤도 시각화용)',
+  @ApiProperty({
+    description: '항성으로부터 거리 (Distance - 리버브와 딜레이 효과 결정)',
     minimum: 1.0,
     maximum: 20.0,
-    example: 10.5,
+    example: 5.2,
   })
-  @IsOptional()
   @IsNumber()
   @Min(1.0)
   @Max(20.0)
-  distanceFromStar?: number;
+  distanceFromStar: number;
 
-  @ApiPropertyOptional({
-    description: '공전 속도 (궤도 애니메이션용)',
+  @ApiProperty({
+    description: '공전 속도 (Speed - 시퀀서 속도와 패턴 밀도 결정)',
     minimum: 0.01,
     maximum: 1.0,
-    example: 0.5,
+    example: 0.85,
   })
-  @IsOptional()
   @IsNumber()
   @Min(0.01)
   @Max(1.0)
-  orbitSpeed?: number;
+  orbitSpeed: number;
 
-  @ApiPropertyOptional({
-    description: '자전 속도 (회전 애니메이션용)',
+  @ApiProperty({
+    description: '자전 속도 (Spin - 트레몰로와 코러스 효과 결정)',
     minimum: 0.01,
     maximum: 1.0,
-    example: 0.5,
+    example: 0.95,
   })
-  @IsOptional()
   @IsNumber()
   @Min(0.01)
   @Max(1.0)
-  rotationSpeed?: number;
+  rotationSpeed: number;
 
-  @ApiPropertyOptional({
-    description: '궤도 기울기 (3D 시각화용)',
-    minimum: -180,
+  @ApiProperty({
+    description: '궤도 이심률 (Eccentricity - 스윙과 액센트 결정)',
+    minimum: 0.0,
+    maximum: 0.9,
+    example: 0.25,
+  })
+  @IsNumber()
+  @Min(0.0)
+  @Max(0.9)
+  eccentricity: number;
+
+  @ApiProperty({
+    description: '축 기울기 (Tilt - 패닝과 스테레오 폭 결정)',
+    minimum: 0,
     maximum: 180,
-    example: 0,
+    example: 50,
   })
-  @IsOptional()
   @IsNumber()
-  @Min(-180)
+  @Min(0)
   @Max(180)
-  inclination?: number;
-
-  @ApiPropertyOptional({
-    description: '오실레이터 타입 (0-7)',
-    minimum: 0,
-    maximum: 7,
-    example: 0,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(7)
-  oscillatorType?: number;
-
-  @ApiPropertyOptional({
-    description: '필터 공명값',
-    minimum: 0.1,
-    maximum: 30.0,
-    example: 1.0,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0.1)
-  @Max(30.0)
-  filterResonance?: number;
-
-  @ApiPropertyOptional({
-    description: '공간 깊이감 (0-100)',
-    minimum: 0,
-    maximum: 100,
-    example: 50,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  spatialDepth?: number;
-
-  @ApiPropertyOptional({
-    description: '패턴 복잡도 (0-100)',
-    minimum: 0,
-    maximum: 100,
-    example: 50,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  patternComplexity?: number;
-
-  @ApiPropertyOptional({
-    description: '리듬 밀도 (0-100)',
-    minimum: 0,
-    maximum: 100,
-    example: 50,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  rhythmDensity?: number;
-
-  @ApiPropertyOptional({
-    description: '멜로디 변화량 (0-100)',
-    minimum: 0,
-    maximum: 100,
-    example: 50,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  melodicVariation?: number;
+  tilt: number;
 }
 
 // 행성 생성 DTO

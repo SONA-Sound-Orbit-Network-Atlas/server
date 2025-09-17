@@ -14,9 +14,13 @@ import {
   Validate,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { StarPropertiesDto, StarResponseDto } from './star.dto';
-import { PlanetResponseDto } from './planet.dto';
+import {
+  ApiProperty,
+  ApiPropertyOptional,
+  ApiHideProperty,
+} from '@nestjs/swagger';
+import { StarResponseDto, StarForSystemDto } from './star.dto';
+import { PlanetResponseDto, PlanetPropertiesDto } from './planet.dto';
 
 // Position 범위 검증을 위한 커스텀 validator
 // x: ±1000, y: ±20, z: ±1000
@@ -82,21 +86,22 @@ export class CreatePlanetForSystemDto {
 
   @ApiProperty({
     description: '행성의 SONA 오디오 속성',
+    type: PlanetPropertiesDto,
     example: {
-      size: 50,
-      color: 180,
-      brightness: 75,
-      distance: 10,
-      speed: 50,
-      tilt: 0,
-      spin: 30,
-      eccentricity: 45,
-      elevation: 0,
-      phase: 0,
+      planetSize: 0.45,
+      planetColor: 15,
+      planetBrightness: 3.8,
+      distanceFromStar: 5.2,
+      orbitSpeed: 0.7,
+      rotationSpeed: 0.4,
+      eccentricity: 0.3,
+      tilt: 5,
     },
   })
   @IsObject()
-  properties: Record<string, number>;
+  @ValidateNested()
+  @Type(() => PlanetPropertiesDto)
+  properties: PlanetPropertiesDto;
 }
 
 // 스텔라 시스템 생성 DTO (항성 자동 생성)
@@ -118,11 +123,8 @@ export class CreateStellarSystemDto {
   @IsNotEmpty()
   galaxy_id: string;
 
-  @ApiPropertyOptional({
-    description: '갤럭시 내 위치 좌표 [x, y, z] (x: ±1000, y: ±20, z: ±1000)',
-    type: [Number],
-    example: [10.5, -5.2, 0],
-  })
+  // position은 서버에서 내부적으로 결정/관리합니다. 공개 API에서는 숨깁니다.
+  @ApiHideProperty()
   @IsOptional()
   @IsArray()
   @Validate(IsValidPosition)
@@ -130,19 +132,22 @@ export class CreateStellarSystemDto {
 
   @ApiPropertyOptional({
     description: '항성 정보 (선택적, 미제공 시 기본값 사용)',
-    type: StarPropertiesDto,
+    type: StarForSystemDto,
     example: {
-      spin: 50,
-      brightness: 75,
-      color: 60,
-      size: 50,
+      name: 'Central Star',
+      properties: {
+        spin: 50,
+        brightness: 75,
+        color: 60,
+        size: 50,
+      },
     },
   })
   @IsOptional()
   @IsObject()
   @ValidateNested()
-  @Type(() => StarPropertiesDto)
-  star?: StarPropertiesDto;
+  @Type(() => StarForSystemDto)
+  star?: StarForSystemDto;
 
   @ApiPropertyOptional({
     description: '행성 정보 배열 (선택적)',
@@ -153,16 +158,14 @@ export class CreateStellarSystemDto {
         name: 'Rhythm Planet',
         role: 'DRUM',
         properties: {
-          size: 50,
-          color: 180,
-          brightness: 75,
-          distance: 10,
-          speed: 50,
-          tilt: 0,
-          spin: 30,
-          eccentricity: 45,
-          elevation: 0,
-          phase: 0,
+          planetSize: 0.45,
+          planetColor: 15,
+          planetBrightness: 3.8,
+          distanceFromStar: 5.2,
+          orbitSpeed: 0.7,
+          rotationSpeed: 0.4,
+          eccentricity: 0.3,
+          tilt: 5,
         },
       },
     ],
@@ -185,11 +188,8 @@ export class UpdateStellarSystemDto {
   @MaxLength(100)
   title?: string;
 
-  @ApiPropertyOptional({
-    description: '갤럭시 내 위치 좌표 [x, y, z] (x: ±1000, y: ±20, z: ±1000)',
-    type: [Number],
-    example: [15.0, 2.5, -1.0],
-  })
+  // position은 서버에서 내부적으로 결정/관리합니다. 공개 API에서는 숨깁니다.
+  @ApiHideProperty()
   @IsOptional()
   @IsArray()
   @Validate(IsValidPosition)
@@ -206,18 +206,48 @@ export class UpdateStellarSystemDto {
 
   @ApiPropertyOptional({
     description: '항성 정보 (전체 편집 시 포함 가능)',
-    type: StarPropertiesDto,
+    type: StarForSystemDto,
   })
   @IsOptional()
   @IsObject()
   @ValidateNested()
-  @Type(() => StarPropertiesDto)
-  star?: StarPropertiesDto;
+  @Type(() => StarForSystemDto)
+  star?: StarForSystemDto;
 
   @ApiPropertyOptional({
     description: '행성 전체 목록 (전체 편집 시 포함 가능, 없으면 기존 유지)',
     type: [CreatePlanetForSystemDto],
     isArray: true,
+    example: [
+      {
+        name: 'Rhythm Planet',
+        role: 'DRUM',
+        properties: {
+          planetSize: 0.45,
+          planetColor: 15,
+          planetBrightness: 3.8,
+          distanceFromStar: 5.2,
+          orbitSpeed: 0.7,
+          rotationSpeed: 0.4,
+          eccentricity: 0.3,
+          tilt: 5,
+        },
+      },
+      {
+        name: 'Bass Planet',
+        role: 'BASS',
+        properties: {
+          planetSize: 0.6,
+          planetColor: 240,
+          planetBrightness: 2.6,
+          distanceFromStar: 8.5,
+          orbitSpeed: 0.35,
+          rotationSpeed: 0.25,
+          eccentricity: 0.2,
+          tilt: 10,
+        },
+      },
+    ],
   })
   @IsOptional()
   @IsArray()
@@ -253,12 +283,8 @@ export class CloneStellarSystemDto {
   @IsNotEmpty()
   galaxy_id: string;
 
-  @ApiPropertyOptional({
-    description:
-      '클론된 시스템의 새로운 위치 좌표 [x, y, z] (x: ±1000, y: ±20, z: ±1000). 미제공 시 랜덤 위치로 생성',
-    type: [Number],
-    example: [100.5, -10.2, 500.0],
-  })
+  // position은 서버에서 내부적으로 결정/관리합니다. 공개 API에서는 숨깁니다.
+  @ApiHideProperty()
   @IsOptional()
   @IsArray()
   @Validate(IsValidPosition)
@@ -340,8 +366,48 @@ export class StellarSystemResponseDto {
 
   @ApiProperty({
     description: '포함된 행성들',
-    type: [PlanetResponseDto],
+    type: PlanetResponseDto,
     isArray: true,
+    example: [
+      {
+        id: 'pln_example123',
+        system_id: 'sys_example456',
+        name: '리듬 행성',
+        object_type: 'PLANET',
+        role: 'DRUM',
+        properties: {
+          planetSize: 0.45,
+          planetColor: 15,
+          planetBrightness: 3.8,
+          distanceFromStar: 5.2,
+          orbitSpeed: 0.7,
+          rotationSpeed: 0.4,
+          eccentricity: 0.3,
+          tilt: 5,
+        },
+        created_at: '2025-09-17T10:30:00.000Z',
+        updated_at: '2025-09-17T10:30:00.000Z',
+      },
+      {
+        id: 'pln_example456',
+        system_id: 'sys_example456',
+        name: '베이스 행성',
+        object_type: 'PLANET',
+        role: 'BASS',
+        properties: {
+          planetSize: 0.6,
+          planetColor: 240,
+          planetBrightness: 2.6,
+          distanceFromStar: 8.5,
+          orbitSpeed: 0.35,
+          rotationSpeed: 0.25,
+          eccentricity: 0.2,
+          tilt: 10,
+        },
+        created_at: '2025-09-17T10:30:00.000Z',
+        updated_at: '2025-09-17T10:30:00.000Z',
+      },
+    ],
   })
   planets: PlanetResponseDto[];
 
@@ -352,8 +418,8 @@ export class StellarSystemResponseDto {
   updated_at: Date;
 }
 
-// 내 스텔라 시스템 기본 정보 DTO
-export class MyStellarSystemInfoDto {
+// 내 스텔라 시스템 목록 조회용 DTO (간소화된 정보)
+export class MyStellarSystemItemDto {
   @ApiProperty({ description: '스텔라 시스템 ID', example: 'sys_987' })
   id: string;
 
@@ -377,15 +443,6 @@ export class MyStellarSystemInfoDto {
     example: '2025-09-10T00:00:00.000Z',
   })
   updated_at: Date;
-}
-
-// 내 스텔라 시스템 목록 조회용 DTO (간소화된 정보)
-export class MyStellarSystemItemDto {
-  @ApiProperty({
-    description: '스텔라 시스템 기본 정보',
-    type: MyStellarSystemInfoDto,
-  })
-  system: MyStellarSystemInfoDto;
 
   @ApiProperty({ description: '좋아요 개수', example: 42 })
   like_count: number;
@@ -393,10 +450,7 @@ export class MyStellarSystemItemDto {
   @ApiProperty({ description: '행성 개수', example: 9 })
   planet_count: number;
 
-  @ApiProperty({
-    description: '인기 순위 (좋아요 수 기준)',
-    example: 1,
-  })
+  @ApiProperty({ description: '인기 순위 (좋아요 수 기준)', example: 1 })
   rank: number;
 }
 
@@ -416,7 +470,7 @@ export class PaginationMetaDto {
 export class MyStellarSystemsResponseDto {
   @ApiProperty({
     description: '내 스텔라 시스템 목록',
-    type: [MyStellarSystemItemDto],
+    type: MyStellarSystemItemDto,
     isArray: true,
   })
   data: MyStellarSystemItemDto[];
@@ -426,4 +480,26 @@ export class MyStellarSystemsResponseDto {
     type: PaginationMetaDto,
   })
   meta: PaginationMetaDto;
+}
+
+// 갤럭시 내 시스템 요약 정보 DTO (비회원 조회용 간소 정보)
+export class GalaxySystemSummaryDto {
+  @ApiProperty({ description: '스텔라 시스템 ID', example: 'sys_p8q2r5t1w9' })
+  id: string;
+
+  @ApiProperty({
+    description: '스텔라 시스템 이름',
+    example: '나의 첫 번째 스텔라 시스템',
+  })
+  title: string;
+
+  @ApiProperty({
+    description: '갤럭시 내 위치 좌표 [x, y, z]',
+    type: [Number],
+    example: [125.5, -8.2, 340.0],
+  })
+  position: number[];
+
+  @ApiProperty({ description: '항성 색상 값 (hue)', example: 210 })
+  color: number;
 }
