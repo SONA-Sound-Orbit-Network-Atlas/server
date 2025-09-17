@@ -8,6 +8,7 @@ import {
 } from '../../common/dto/pagination.dto';
 import { buildPaginationMeta } from '../../common/utils/pagination.util';
 import { getKstRangeUTC } from '../../common/utils/kst-range.util';
+import { Prisma } from '@prisma/client';
 
 type SystemListItem = {
   // 공통(시스템) 필드
@@ -58,7 +59,10 @@ export class LikesService {
       });
       return { message: '좋아요가 생성되었습니다.', like };
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new Error('이미 좋아요를 눌렀습니다.');
       }
       throw error;
@@ -80,18 +84,14 @@ export class LikesService {
       });
       return { message: '좋아요가 삭제되었습니다.' };
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new Error('좋아요가 존재하지 않습니다.');
       }
       throw error;
     }
-  }
-
-  /**
-   * 내가 좋아요 누른 항성계 개수 조회
-   */
-  async countMyLikedSystems(userId: string): Promise<number> {
-    return this.prisma.like.count({ where: { user_id: userId } });
   }
 
   /** 공통 매핑 유틸: Prisma 결과 → 평평한 SystemListItem */
@@ -105,7 +105,9 @@ export class LikesService {
       updated_at: Date;
       _count?: { planets?: number };
     },
-    extra: Partial<Pick<SystemListItem, 'like_count' | 'liked_at' | 'rank' | 'is_liked'>> = {},
+    extra: Partial<
+      Pick<SystemListItem, 'like_count' | 'liked_at' | 'rank' | 'is_liked'>
+    > = {}
   ): SystemListItem {
     return {
       id: sys.id,
@@ -125,7 +127,7 @@ export class LikesService {
    */
   async getMyLikes(
     userId: string,
-    dto: PaginationDto,
+    dto: PaginationDto
   ): Promise<PaginatedResponse<SystemListItem>> {
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.like.findMany({
@@ -151,109 +153,167 @@ export class LikesService {
       this.prisma.like.count({ where: { user_id: userId } }),
     ]);
 
-    const data: SystemListItem[] = rows.map((row) =>
+    const data: SystemListItem[] = rows.map(row =>
       this.toSystemListItem(row.system as any, {
         liked_at: row.created_at,
         is_liked: true, // 내가 좋아요한 목록이므로 항상 true
-      }),
+      })
     );
 
     return { data, meta: buildPaginationMeta(total, dto) };
   }
 
   /**
-   * 주/월/년: 기간 좋아요수 랭킹, 랜덤: 무작위
+   * 주/월/년/전체: 기간 좋아요수 랭킹, 랜덤: 무작위
    * 반환: PaginatedResponse<SystemListItem> (like_count, rank, is_liked 포함 가능)
    *
    * @param viewerId 현재 조회자(선택). 전달되면 is_liked 계산.
    */
+  // 실제 DB 테이블/컬럼명 상수 (@@map 기준)
+  T_STELLAR = Prisma.raw(`"stellar_systems"`);
+  T_LIKE = Prisma.raw(`"likes"`);
+  C_CREATED_AT = Prisma.raw(`"created_at"`);
+  C_SYSTEM_ID = Prisma.raw(`"system_id"`);
+
   async getLikeRankings(
-    dto: PaginationDto & { rangk_type?: RangkType },
-    viewerId?: string,
+    dto: PaginationDto & {
+      rank_type?: 'total' | 'year' | 'month' | 'week' | 'random';
+    },
+    viewerId?: string
   ): Promise<PaginatedResponse<SystemListItem>> {
-    // 0) 안전한 페이지/리밋 계산
-    const rawPage = Number((dto as any).page ?? 1);
-    const rawLimit = Number((dto as any).limit ?? 20);
-    const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
-    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : 20;
+    // 0) 페이지네이션(안전 보정)
+    const page = Math.max(1, Math.floor(Number(dto.page ?? 1)));
+    const limit = Math.min(
+      100,
+      Math.max(1, Math.floor(Number(dto.limit ?? 20)))
+    );
     const skip = (page - 1) * limit;
     const take = limit;
 
-    // 1) 기간 필터
-    let likeWhere: any = {};
-    if (dto.rangk_type && dto.rangk_type !== RangkType.RANDOM) {
-      const { gte, lte } = getKstRangeUTC(dto.rangk_type);
-      likeWhere = { created_at: { gte, lte } };
-    }
+    const rankType = dto.rank_type ?? 'total';
 
-    let rankings: { system_id: string; like_count: number }[] = [];
-    let total = 0;
+    // ─────────────────────────────────────────────
+    // RANDOM: 0 포함 + 무작위 정렬
+    if (rankType === 'random') {
+      const rows = await this.prisma.$queryRaw<
+        { id: string; like_count: number }[]
+      >(
+        Prisma.sql`
+        SELECT s.id,
+               COALESCE(COUNT(l.${this.C_SYSTEM_ID}), 0)::int AS like_count
+        FROM ${this.T_STELLAR} AS s
+        LEFT JOIN ${this.T_LIKE}    AS l ON l.${this.C_SYSTEM_ID} = s.id
+        GROUP BY s.id
+        ORDER BY RANDOM()
+        OFFSET ${skip} LIMIT ${take};
+      `
+      );
 
-    if (dto.rangk_type === RangkType.RANDOM) {
-      const totalSystems = await this.prisma.stellarSystem.count();
-      if (totalSystems === 0) {
-        return {
-          data: [],
-          meta: buildPaginationMeta(0, { ...dto, page, limit, skip, take } as any),
-        };
+      const total = await this.prisma.stellarSystem.count(); // 시스템 총 개수 = 페이지네이션 분모
+
+      const systemIds = rows.map(r => r.id);
+      const systems = await this.prisma.stellarSystem.findMany({
+        where: { id: { in: systemIds } },
+        select: {
+          id: true,
+          title: true,
+          galaxy_id: true,
+          creator_id: true,
+          created_at: true,
+          updated_at: true,
+          _count: { select: { planets: true } },
+        },
+      });
+      const sysMap = new Map(systems.map(s => [s.id, s]));
+
+      let likedSet = new Set<string>();
+      if (viewerId && systemIds.length) {
+        const likedRows = await this.prisma.like.findMany({
+          where: { user_id: viewerId, system_id: { in: systemIds } },
+          select: { system_id: true },
+        });
+        likedSet = new Set(likedRows.map(r => r.system_id));
       }
 
-      const safeTake = Math.min(Math.max(take, 1), totalSystems);
-      const maxOffset = Math.max(totalSystems - safeTake, 0);
-      const randSkip = maxOffset > 0 ? Math.floor(Math.random() * (maxOffset + 1)) : 0;
+      const data: SystemListItem[] = rows
+        .map((r, idx) => {
+          const s = sysMap.get(r.id);
+          if (!s) return null as any;
+          return this.toSystemListItem(s, {
+            like_count: r.like_count,
+            rank: idx + 1,
+            is_liked: viewerId ? likedSet.has(s.id) : false,
+          });
+        })
+        .filter(Boolean) as SystemListItem[];
 
-      const randomSystems = await this.prisma.stellarSystem.findMany({
-        select: { id: true },
-        orderBy: { created_at: 'asc' },
-        skip: randSkip,
-        take: safeTake,
-      });
-      const systemIds = randomSystems.map((s) => s.id);
-
-      const likeCounts = await this.prisma.like.groupBy({
-        by: ['system_id'],
-        where: { system_id: { in: systemIds } },
-        _count: { system_id: true },
-      });
-
-      const countMap = new Map(likeCounts.map((lc) => [lc.system_id, lc._count.system_id]));
-      rankings = systemIds.map((id) => ({
-        system_id: id,
-        like_count: countMap.get(id) ?? 0,
-      }));
-      total = rankings.length;
-    } else {
-      const allGroups = await this.prisma.like.groupBy({
-        by: ['system_id'],
-        where: likeWhere,
-        _count: { system_id: true },
-      });
-      total = allGroups.length;
-
-      const pageGroups = await this.prisma.like.groupBy({
-        by: ['system_id'],
-        where: likeWhere,
-        _count: { system_id: true },
-        orderBy: { _count: { system_id: 'desc' } },
-        skip,
-        take,
-      });
-
-      rankings = pageGroups.map((g) => ({
-        system_id: g.system_id,
-        like_count: g._count.system_id,
-      }));
-    }
-
-    const systemIds = rankings.map((r) => r.system_id);
-    if (systemIds.length === 0) {
       return {
-        data: [],
-        meta: buildPaginationMeta(total, { ...dto, page, limit, skip, take } as any),
+        data,
+        meta: buildPaginationMeta(total, {
+          ...dto,
+          page,
+          limit,
+        } as PaginationDto),
       };
     }
 
-    // 시스템 메타(행성 수 포함)
+    // ─────────────────────────────────────────────
+    // TOTAL / YEAR / MONTH / WEEK: 0 포함 + 기간 필터
+    const rawRange = getKstRangeUTC(rankType as any) as {
+      gte: Date;
+      lte: Date;
+    } | null;
+    const range = rankType === 'total' ? null : rawRange;
+
+    const timeJoinSql = range
+      ? Prisma.sql`AND l.${this.C_CREATED_AT} BETWEEN ${range.gte} AND ${range.lte}`
+      : Prisma.sql``;
+
+    // (필요 시) 시스템 WHERE 필터 추가
+    const whereSql = Prisma.sql``;
+
+    // 1) 페이지 데이터 (좋아요 0 포함)
+    const rows = await this.prisma.$queryRaw<
+      { id: string; like_count: number }[]
+    >(
+      Prisma.sql`
+      SELECT s.id,
+             COALESCE(COUNT(l.${this.C_SYSTEM_ID}), 0)::int AS like_count
+      FROM ${this.T_STELLAR} AS s
+      LEFT JOIN ${this.T_LIKE}    AS l
+        ON l.${this.C_SYSTEM_ID} = s.id
+       ${timeJoinSql}
+      ${whereSql}
+      GROUP BY s.id
+      ORDER BY like_count DESC, s.${this.C_CREATED_AT} DESC, s.id ASC
+      OFFSET ${skip} LIMIT ${take};
+    `
+    );
+
+    // 2) 전체 개수(페이지네이션용): 시스템 기준
+    const total = await this.prisma
+      .$queryRaw<{ total: number }[]>(
+        Prisma.sql`
+      SELECT COUNT(*)::int AS total
+      FROM ${this.T_STELLAR} AS s
+      ${whereSql};
+    `
+      )
+      .then(r => r[0]?.total ?? 0);
+
+    if (!rows.length) {
+      return {
+        data: [],
+        meta: buildPaginationMeta(total, {
+          ...dto,
+          page,
+          limit,
+        } as PaginationDto),
+      };
+    }
+
+    // 3) 시스템 메타 + is_liked
+    const systemIds = rows.map(r => r.id);
     const systems = await this.prisma.stellarSystem.findMany({
       where: { id: { in: systemIds } },
       select: {
@@ -263,118 +323,45 @@ export class LikesService {
         creator_id: true,
         created_at: true,
         updated_at: true,
-        _count: { select: { planets: true } },
+        _count: { select: { planets: true } }, // like_count는 rows 값 사용
       },
     });
-    const systemMap = new Map(systems.map((s) => [s.id, s]));
+    const systemMap = new Map(systems.map(s => [s.id, s]));
 
-    // 현재 조회자의 좋아요 여부 세트
     let likedSet = new Set<string>();
     if (viewerId) {
       const likedRows = await this.prisma.like.findMany({
         where: { user_id: viewerId, system_id: { in: systemIds } },
         select: { system_id: true },
       });
-      likedSet = new Set(likedRows.map((r) => r.system_id));
+      likedSet = new Set(likedRows.map(r => r.system_id));
     }
 
-   const data: SystemListItem[] = rankings
-  .map((r, idx) => {
-    const sys = systemMap.get(r.system_id);
-    if (!sys) return null;
-    return this.toSystemListItem(sys, {
-      like_count: r.like_count,
-      rank: dto.rangk_type === RangkType.RANDOM ? idx + 1 : skip + idx + 1,
-      is_liked: viewerId ? likedSet.has(sys.id) : false,
-    });
-  })
-  .filter(Boolean) as SystemListItem[];
+    const data: SystemListItem[] = rows
+      .map((r, idx) => {
+        const s = systemMap.get(r.id);
+        if (!s) return null as any;
+        return this.toSystemListItem(s, {
+          like_count: r.like_count,
+          rank: skip + idx + 1,
+          is_liked: viewerId ? likedSet.has(s.id) : false,
+        });
+      })
+      .filter(Boolean) as SystemListItem[];
 
     return {
       data,
-      meta: buildPaginationMeta(total, { ...dto, page, limit, skip, take } as any),
+      meta: buildPaginationMeta(total, {
+        ...dto,
+        page,
+        limit,
+      } as PaginationDto),
     };
   }
-
   /**
-   * 전체 기간 상위 좋아요 시스템
-   * 반환: PaginatedResponse<SystemListItem> (like_count, rank, is_liked 포함 가능)
-   *
-   * @param viewerId 현재 조회자(선택). 전달되면 is_liked 계산.
+   * 내가 좋아요 누른 항성계 개수 조회
    */
-  async getTopLikedSystems(
-    dto: PaginationDto,
-    viewerId?: string,
-  ): Promise<PaginatedResponse<SystemListItem>> {
-    const rawPage = Number((dto as any).page ?? 1);
-    const rawLimit = Number((dto as any).limit ?? 20);
-    const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
-    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : 20;
-    const skip = (page - 1) * limit;
-    const take = limit;
-
-    const totalGroups = await this.prisma.like.groupBy({
-      by: ['system_id'],
-      _count: { system_id: true },
-    });
-    const total = totalGroups.length;
-
-    if (total === 0) {
-      return {
-        data: [],
-        meta: buildPaginationMeta(0, { ...dto, page, limit, skip, take } as any),
-      };
-    }
-
-    const pageGroups = await this.prisma.like.groupBy({
-      by: ['system_id'],
-      _count: { system_id: true },
-      orderBy: { _count: { system_id: 'desc' } },
-      skip,
-      take,
-    });
-
-    const systemIds = pageGroups.map((g) => g.system_id);
-
-    const systems = await this.prisma.stellarSystem.findMany({
-      where: { id: { in: systemIds } },
-      select: {
-        id: true,
-        title: true,
-        galaxy_id: true,
-        creator_id: true,
-        created_at: true,
-        updated_at: true,
-        _count: { select: { planets: true } },
-      },
-    });
-    const systemMap = new Map(systems.map((s) => [s.id, s]));
-
-    // 현재 조회자의 좋아요 여부 세트
-    let likedSet = new Set<string>();
-    if (viewerId) {
-      const likedRows = await this.prisma.like.findMany({
-        where: { user_id: viewerId, system_id: { in: systemIds } },
-        select: { system_id: true },
-      });
-      likedSet = new Set(likedRows.map((r) => r.system_id));
-    }
-
-    const data: SystemListItem[] = pageGroups
-  .map((g, idx) => {
-    const sys = systemMap.get(g.system_id);
-    if (!sys) return null;
-    return this.toSystemListItem(sys, {
-      like_count: g._count.system_id,
-      rank: skip + idx + 1,
-      is_liked: viewerId ? likedSet.has(sys.id) : false,
-    });
-  })
-  .filter(Boolean) as SystemListItem[];
-
-    return {
-      data,
-      meta: buildPaginationMeta(total, { ...dto, page, limit, skip, take } as any),
-    };
+  async countMyLikedSystems(userId: string): Promise<number> {
+    return this.prisma.like.count({ where: { user_id: userId } });
   }
 }
