@@ -86,6 +86,7 @@ export class StellarSystemService {
 
         // 2. 항성 자동 생성 (기본값 또는 사용자 제공값 사용)
         const defaultStarProperties: StarPropertiesDto = {
+          name: 'CENTRAL STAR', // 기본 항성 이름
           spin: 50, // BPM 120
           brightness: 75, // Volume 75%
           color: 60, // Key/Scale
@@ -93,13 +94,16 @@ export class StellarSystemService {
           ...dto.star, // 사용자 제공 속성으로 덮어쓰기
         };
 
+        // Star name을 분리해서 처리
+        const starName = defaultStarProperties.name || 'CENTRAL STAR';
+        const { name: _, ...starProperties } = defaultStarProperties;
+
         // 타입 안전한 변환 헬퍼 사용
-        const starPropertiesJson = this.convertToJsonObject(
-          defaultStarProperties
-        );
+        const starPropertiesJson = this.convertToJsonObject(starProperties);
         const star = await tx.star.create({
           data: {
             system_id: finalSystem.id,
+            name: starName, // 프론트에서 제공된 이름 또는 기본값
             properties: starPropertiesJson,
           },
         });
@@ -395,27 +399,30 @@ export class StellarSystemService {
           },
         });
 
-        // 2) 항성 upsert (있으면 properties 업데이트, 없으면 생성)
+        // 2) 항성 업데이트 (시스템당 항상 하나의 항성이 존재)
         let star: Star | null = await tx.star.findUnique({
           where: { system_id: id },
         });
+        
         if (dto.star) {
-          const starProps = this.convertToJsonObject(dto.star);
-          if (star) {
-            star = await tx.star.update({
-              where: { system_id: id },
-              data: { properties: starProps },
-            });
-          } else {
-            star = await tx.star.create({
-              data: {
-                system_id: id,
-                properties: starProps,
-              },
-            });
+          if (!star) {
+            throw new NotFoundException(
+              '스텔라 시스템에 항성이 존재하지 않습니다. 데이터 무결성 오류입니다.'
+            );
           }
-        } else {
-          // dto.star가 없으면 기존 값을 유지
+
+          // Star name을 분리해서 처리
+          const starName = dto.star.name || star.name; // 기존 이름 유지 또는 새 이름 사용
+          const { name: _, ...starPropertiesOnly } = dto.star;
+          
+          const starProps = this.convertToJsonObject(starPropertiesOnly);
+          star = await tx.star.update({
+            where: { system_id: id },
+            data: {
+              name: starName, // 프론트에서 제공된 이름 또는 기존 이름 유지
+              properties: starProps,
+            },
+          });
         }
 
         // 3) 행성 델타 업데이트 (planets가 제공된 경우에만)
