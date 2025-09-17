@@ -194,6 +194,8 @@ model Like {
   @@unique([user_id, system_id])
   @@index([user_id])
   @@index([system_id])
+  @@index([system_id, created_at]) // <<
+  @@index([created_at]) // <<
   @@map("likes")
 }
 
