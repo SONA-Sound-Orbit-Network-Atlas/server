@@ -351,3 +351,79 @@ export class StellarSystemResponseDto {
   @ApiProperty({ description: '수정 시간' })
   updated_at: Date;
 }
+
+// 내 스텔라 시스템 기본 정보 DTO
+export class MyStellarSystemInfoDto {
+  @ApiProperty({ description: '스텔라 시스템 ID', example: 'sys_987' })
+  id: string;
+
+  @ApiProperty({ description: '스텔라 시스템 이름', example: '안드로메다-7' })
+  title: string;
+
+  @ApiProperty({ description: '소속 갤럭시 ID', example: 'gal_777' })
+  galaxy_id: string;
+
+  @ApiProperty({ description: '소유자 ID', example: 'usr_999' })
+  creator_id: string;
+
+  @ApiProperty({
+    description: '생성 시간',
+    example: '2025-08-01T00:00:00.000Z',
+  })
+  created_at: Date;
+
+  @ApiProperty({
+    description: '수정 시간',
+    example: '2025-09-10T00:00:00.000Z',
+  })
+  updated_at: Date;
+}
+
+// 내 스텔라 시스템 목록 조회용 DTO (간소화된 정보)
+export class MyStellarSystemItemDto {
+  @ApiProperty({
+    description: '스텔라 시스템 기본 정보',
+    type: MyStellarSystemInfoDto,
+  })
+  system: MyStellarSystemInfoDto;
+
+  @ApiProperty({ description: '좋아요 개수', example: 42 })
+  like_count: number;
+
+  @ApiProperty({ description: '행성 개수', example: 9 })
+  planet_count: number;
+
+  @ApiProperty({
+    description: '인기 순위 (좋아요 수 기준)',
+    example: 1,
+  })
+  rank: number;
+}
+
+// 페이지네이션 메타데이터 DTO
+export class PaginationMetaDto {
+  @ApiProperty({ description: '현재 페이지 번호', example: 1 })
+  page: number;
+
+  @ApiProperty({ description: '페이지당 항목 수', example: 20 })
+  limit: number;
+
+  @ApiProperty({ description: '전체 항목 수', example: 250 })
+  total: number;
+}
+
+// 내 스텔라 시스템 목록 응답 DTO
+export class MyStellarSystemsResponseDto {
+  @ApiProperty({
+    description: '내 스텔라 시스템 목록',
+    type: [MyStellarSystemItemDto],
+    isArray: true,
+  })
+  data: MyStellarSystemItemDto[];
+
+  @ApiProperty({
+    description: '페이지네이션 메타데이터',
+    type: PaginationMetaDto,
+  })
+  meta: PaginationMetaDto;
+}
