@@ -278,14 +278,14 @@ export class StellarSystemService {
       throw new NotFoundException('복제할 원본 시스템을 찾을 수 없습니다.');
     }
 
-    // 대상 갤럭시 존재 확인만 수행
+    // 대상 갤럭시는 원본과 동일하게 설정
     const galaxy = await this.prisma.galaxy.findUnique({
-      where: { id: dto.galaxy_id },
+      where: { id: sourceSystem.galaxy_id },
       select: { id: true },
     });
 
     if (!galaxy) {
-      throw new NotFoundException('대상 갤럭시를 찾을 수 없습니다.');
+      throw new NotFoundException('원본 시스템의 갤럭시를 찾을 수 없습니다.');
     }
 
     // 트랜잭션으로 시스템, 항성, 행성 모두 클론
@@ -306,15 +306,15 @@ export class StellarSystemService {
           inheritedAuthorId = original?.author_id ?? sourceSystem.author_id;
         }
 
-        // 1. 새 스텔라 시스템 생성 (클론) - 새로운 위치 생성
-        // position이 제공되면 사용하고, 아니면 랜덤 생성
-        const clonePosition = dto.position || this.generateRandomPosition();
+        // 1. 새 스텔라 시스템 생성 (클론) - 자동으로 랜덤 위치 생성
+        const clonePosition = this.generateRandomPosition();
+        const cloneTitle = `${sourceSystem.title} (클론)`;
 
         const clonedSystem = await tx.stellarSystem.create({
           data: {
-            title: dto.title, // DTO의 title을 title 필드에 저장
-            galaxy_id: dto.galaxy_id,
-            position: JSON.stringify(clonePosition), // 지정된 위치 또는 새로운 랜덤 위치
+            title: cloneTitle, // 원본 제목 + " (클론)"
+            galaxy_id: sourceSystem.galaxy_id, // 원본과 동일한 갤럭시
+            position: JSON.stringify(clonePosition), // 새로운 랜덤 위치
             creator_id: userId, // 현재 소유자 (클론한 사람)
             author_id: inheritedAuthorId, // 최초 생성자(원작자) 승계
             create_source_id: sourceSystem.id, // 클론 소스의 ID

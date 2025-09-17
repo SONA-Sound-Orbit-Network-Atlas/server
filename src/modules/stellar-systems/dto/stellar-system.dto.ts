@@ -180,6 +180,14 @@ export class CreateStellarSystemDto {
 // 스텔라 시스템 수정 DTO
 export class UpdateStellarSystemDto {
   @ApiPropertyOptional({
+    description:
+      '소속 갤럭시 ID (수정 시에도 허용, 변경은 불가하며 서버에서 무시됩니다)',
+    example: 'gal_abc123',
+  })
+  @IsOptional()
+  @IsString()
+  galaxy_id?: string;
+  @ApiPropertyOptional({
     description: '스텔라 시스템 이름',
     example: 'Updated System Name',
   })
@@ -194,15 +202,6 @@ export class UpdateStellarSystemDto {
   @IsArray()
   @Validate(IsValidPosition)
   position?: number[];
-
-  @ApiPropertyOptional({
-    description: '스텔라 시스템 설명',
-    example: 'Updated description',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  description?: string;
 
   @ApiPropertyOptional({
     description: '항성 정보 (전체 편집 시 포함 가능)',
@@ -256,7 +255,7 @@ export class UpdateStellarSystemDto {
   planets?: CreatePlanetForSystemDto[];
 }
 
-// 스텔라 시스템 클론 DTO
+// 스텔라 시스템 클론 DTO (간소화된 버전 - create_source_id만 필요)
 export class CloneStellarSystemDto {
   @ApiProperty({
     description: '클론할 원본 스텔라 시스템 ID',
@@ -266,29 +265,10 @@ export class CloneStellarSystemDto {
   @IsNotEmpty()
   create_source_id: string;
 
-  @ApiProperty({
-    description: '새로운 시스템 이름',
-    example: 'Cloned System',
-  })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
-  title: string;
-
-  @ApiProperty({
-    description: '새로운 시스템이 속할 갤럭시 ID',
-    example: 'gal_xyz789',
-  })
-  @IsString()
-  @IsNotEmpty()
-  galaxy_id: string;
-
-  // position은 서버에서 내부적으로 결정/관리합니다. 공개 API에서는 숨깁니다.
-  @ApiHideProperty()
-  @IsOptional()
-  @IsArray()
-  @Validate(IsValidPosition)
-  position?: number[];
+  // 나머지 필드들(title, galaxy_id, position)은 서버에서 자동으로 처리됩니다
+  // - title: 원본 제목 + " (클론)" 형식으로 자동 생성
+  // - galaxy_id: 원본과 동일한 갤럭시에 생성
+  // - position: 서버에서 랜덤 위치 생성
 }
 
 // 스텔라 시스템 응답 DTO
