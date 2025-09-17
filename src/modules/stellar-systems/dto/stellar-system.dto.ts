@@ -289,15 +289,6 @@ export class CloneStellarSystemDto {
   @IsArray()
   @Validate(IsValidPosition)
   position?: number[];
-
-  @ApiPropertyOptional({
-    description: '새로운 시스템 설명',
-    example: 'Cloned from original system',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  description?: string;
 }
 
 // 스텔라 시스템 응답 DTO
@@ -350,9 +341,6 @@ export class StellarSystemResponseDto {
       '최초 소스 시스템의 이름 (original_source_id에 해당하는 시스템 이름). 항상 문자열로 반환됩니다.',
   })
   original_source_name: string;
-
-  @ApiPropertyOptional({ description: '스텔라 시스템 설명' })
-  description?: string | null;
 
   @ApiProperty({
     description: '생성 방식',
