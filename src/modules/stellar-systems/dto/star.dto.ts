@@ -10,6 +10,7 @@ import {
   IsNumber,
   Min,
   Max,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -17,6 +18,15 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 // 항성 속성 DTO (JSONB로 저장)
 // SONA 전역 오디오 제어 파라미터들 (프론트엔드 StarProperties와 일치)
 export class StarPropertiesDto {
+  @ApiPropertyOptional({
+    description: '항성 이름',
+    example: 'Central Star',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  name?: string;
+
   @ApiProperty({
     description: '항성 자전 속도 (전체 BPM 결정: 60-180 BPM)',
     minimum: 0,

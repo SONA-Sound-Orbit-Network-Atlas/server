@@ -76,6 +76,9 @@ model StellarSystem {
 
   title String
 
+  // 갤럭시 내에서의 위치 좌표 [x, y, z] - JSON 배열로 저장
+  position Json? @default("[0, 0, 0]")
+
   created_via CreationMethod @default(MANUAL) // MANUAL | CLONE
   created_at  DateTime       @default(now())
   updated_at  DateTime       @updatedAt

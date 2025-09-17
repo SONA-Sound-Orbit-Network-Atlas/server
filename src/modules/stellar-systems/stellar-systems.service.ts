@@ -22,6 +22,22 @@ export class StellarSystemService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * 갤럭시 내에서 랜덤한 위치를 생성합니다
+   * x: -1000 ~ +1000, y: -20 ~ +20, z: -1000 ~ +1000
+   */
+  private generateRandomPosition(): number[] {
+    const x = Math.random() * 2000 - 1000; // -1000 ~ +1000
+    const y = Math.random() * 40 - 20; // -20 ~ +20
+    const z = Math.random() * 2000 - 1000; // -1000 ~ +1000
+
+    return [
+      Math.round(x * 10) / 10, // 소수점 1자리까지
+      Math.round(y * 10) / 10, // 소수점 1자리까지
+      Math.round(z * 10) / 10, // 소수점 1자리까지
+    ];
+  }
+
+  /**
    * 새로운 스텔라 시스템 생성 (항성 자동 생성 포함)
    * - 스텔라 시스템과 항성이 동시에 생성됩니다
    * - 항성은 삭제할 수 없으며, 시스템당 정확히 하나만 존재합니다
@@ -33,7 +49,6 @@ export class StellarSystemService {
     // userId 검증 (인증 실패 시 대응)
 
     if (!userId) {
-      console.log('[StellarSystemService] Forbidden: userId is missing', { userId, dto });
       throw new ForbiddenException('로그인이 필요합니다.');
     }
 
@@ -44,7 +59,6 @@ export class StellarSystemService {
     });
 
     if (!galaxy) {
-      console.log('[StellarSystemService] NotFound: galaxy not found', { galaxyId: dto.galaxy_id, dto });
       throw new NotFoundException('해당 갤럭시를 찾을 수 없습니다.');
     }
 
@@ -52,11 +66,16 @@ export class StellarSystemService {
       async (tx: Prisma.TransactionClient) => {
         // 1. 스텔라 시스템 생성 (소스 ID는 자기 자신으로 즉시 설정)
         const newId = randomUUID();
+
+        // position이 제공되지 않았다면 랜덤 위치 생성
+        const systemPosition = dto.position || this.generateRandomPosition();
+
         const finalSystem = await tx.stellarSystem.create({
           data: {
             id: newId,
             title: dto.title, // title 필드에 저장
             galaxy_id: dto.galaxy_id,
+            position: JSON.stringify(systemPosition), // 제공된 위치 또는 랜덤 위치 저장
             creator_id: userId, // 현재 소유자
             author_id: userId, // 최초 생성자 (새로 생성하는 경우 동일)
             create_source_id: newId, // 자기 자신의 ID를 클론 소스로 설정
@@ -67,6 +86,7 @@ export class StellarSystemService {
 
         // 2. 항성 자동 생성 (기본값 또는 사용자 제공값 사용)
         const defaultStarProperties: StarPropertiesDto = {
+          name: 'CENTRAL STAR', // 기본 항성 이름
           spin: 50, // BPM 120
           brightness: 75, // Volume 75%
           color: 60, // Key/Scale
@@ -74,13 +94,16 @@ export class StellarSystemService {
           ...dto.star, // 사용자 제공 속성으로 덮어쓰기
         };
 
+        // Star name을 분리해서 처리
+        const starName = defaultStarProperties.name || 'CENTRAL STAR';
+        const { name: _, ...starProperties } = defaultStarProperties;
+
         // 타입 안전한 변환 헬퍼 사용
-        const starPropertiesJson = this.convertToJsonObject(
-          defaultStarProperties
-        );
+        const starPropertiesJson = this.convertToJsonObject(starProperties);
         const star = await tx.star.create({
           data: {
             system_id: finalSystem.id,
+            name: starName, // 프론트에서 제공된 이름 또는 기본값
             properties: starPropertiesJson,
           },
         });
@@ -115,12 +138,97 @@ export class StellarSystemService {
   }
 
   /**
-   * 스텔라 시스템 조회 (항성 및 행성 포함)
+   * 갤럭시 내 스텔라 시스템 전체 조회 (간소 정보)
+   * - id, title, position, color(항성 색상) 만 반환
    */
-  async getStellarSystem(
-    id: string,
-    userId: string
-  ): Promise<StellarSystemResponseDto> {
+  async getGalaxyStellarSystems(galaxyId: string): Promise<
+    Array<{
+      id: string;
+      title: string;
+      position: number[];
+      color: number;
+    }>
+  > {
+    // 갤럭시 존재 확인
+    const galaxy = await this.prisma.galaxy.findUnique({
+      where: { id: galaxyId },
+      select: { id: true },
+    });
+
+    if (!galaxy) {
+      throw new NotFoundException('해당 갤럭시를 찾을 수 없습니다.');
+    }
+
+    // 갤럭시에 속한 모든 스텔라 시스템 조회 (항성 정보 포함)
+    const stellarSystems = await this.prisma.stellarSystem.findMany({
+      where: { galaxy_id: galaxyId },
+      include: {
+        star: {
+          select: {
+            properties: true,
+          },
+        },
+      },
+    });
+
+    // 응답 형식으로 변환
+    return stellarSystems.map(system => {
+      // position JSON을 number[] 배열로 변환
+      let position: number[] = [0, 0, 0]; // 기본값
+      try {
+        if (system.position) {
+          let positionData: unknown;
+          if (Array.isArray(system.position)) {
+            positionData = system.position;
+          } else {
+            positionData = JSON.parse(system.position as string);
+          }
+          if (Array.isArray(positionData) && positionData.length >= 3) {
+            position = [
+              Number(positionData[0]) || 0,
+              Number(positionData[1]) || 0,
+              Number(positionData[2]) || 0,
+            ];
+          }
+        }
+      } catch (error) {
+        // JSON 파싱 실패 시 기본값 사용
+        console.warn(`Position parsing failed for system ${system.id}:`, error);
+      }
+
+      // 항성의 color 속성에서 색상 추출
+      let color = 60; // 기본값
+      try {
+        const star = system.star;
+        if (star && star.properties) {
+          const starProps = this.convertFromJsonValue(star.properties);
+          if (
+            starProps &&
+            typeof starProps === 'object' &&
+            'color' in starProps
+          ) {
+            color = Number(starProps.color) || 60;
+          }
+        }
+      } catch (error) {
+        // 색상 추출 실패 시 기본값 사용
+        console.warn(`Color parsing failed for system ${system.id}:`, error);
+      }
+
+      return {
+        id: system.id,
+        title: system.title,
+        position,
+        color,
+      };
+    });
+  }
+
+  /**
+   * 스텔라 시스템 조회 (항성 및 행성 포함)
+   * 인증 없이도 조회 가능
+   */
+  async getStellarSystem(id: string): Promise<StellarSystemResponseDto> {
     const system = await this.prisma.stellarSystem.findUnique({
       where: { id },
       include: {
@@ -133,10 +241,7 @@ export class StellarSystemService {
       throw new NotFoundException('스텔라 시스템을 찾을 수 없습니다.');
     }
 
-    // 소유자 확인 (필요시)
-    if (system.creator_id !== userId) {
-      throw new ForbiddenException('이 스텔라 시스템에 대한 권한이 없습니다.');
-    }
+    // 인증 검사 제거 - 누구나 조회 가능
 
     // DTO 형식으로 반환 (프론트엔드 호환)
     return await this.mapToStellarSystemResponseDto(
@@ -202,11 +307,15 @@ export class StellarSystemService {
           inheritedAuthorId = original?.author_id ?? sourceSystem.author_id;
         }
 
-        // 1. 새 스텔라 시스템 생성 (클론)
+        // 1. 새 스텔라 시스템 생성 (클론) - 새로운 위치 생성
+        // position이 제공되면 사용하고, 아니면 랜덤 생성
+        const clonePosition = dto.position || this.generateRandomPosition();
+
         const clonedSystem = await tx.stellarSystem.create({
           data: {
             title: dto.title, // DTO의 title을 title 필드에 저장
             galaxy_id: dto.galaxy_id,
+            position: JSON.stringify(clonePosition), // 지정된 위치 또는 새로운 랜덤 위치
             creator_id: userId, // 현재 소유자 (클론한 사람)
             author_id: inheritedAuthorId, // 최초 생성자(원작자) 승계
             create_source_id: sourceSystem.id, // 클론 소스의 ID
@@ -286,30 +395,34 @@ export class StellarSystemService {
           where: { id },
           data: {
             title: dto.title ?? undefined,
+            position: dto.position ? JSON.stringify(dto.position) : undefined,
           },
         });
 
-        // 2) 항성 upsert (있으면 properties 업데이트, 없으면 생성)
+        // 2) 항성 업데이트 (시스템당 항상 하나의 항성이 존재)
         let star: Star | null = await tx.star.findUnique({
           where: { system_id: id },
         });
+        
         if (dto.star) {
-          const starProps = this.convertToJsonObject(dto.star);
-          if (star) {
-            star = await tx.star.update({
-              where: { system_id: id },
-              data: { properties: starProps },
-            });
-          } else {
-            star = await tx.star.create({
-              data: {
-                system_id: id,
-                properties: starProps,
-              },
-            });
+          if (!star) {
+            throw new NotFoundException(
+              '스텔라 시스템에 항성이 존재하지 않습니다. 데이터 무결성 오류입니다.'
+            );
           }
-        } else {
-          // dto.star가 없으면 기존 값을 유지
+
+          // Star name을 분리해서 처리
+          const starName = dto.star.name || star.name; // 기존 이름 유지 또는 새 이름 사용
+          const { name: _, ...starPropertiesOnly } = dto.star;
+          
+          const starProps = this.convertToJsonObject(starPropertiesOnly);
+          star = await tx.star.update({
+            where: { system_id: id },
+            data: {
+              name: starName, // 프론트에서 제공된 이름 또는 기존 이름 유지
+              properties: starProps,
+            },
+          });
         }
 
         // 3) 행성 델타 업데이트 (planets가 제공된 경우에만)
@@ -412,6 +525,29 @@ export class StellarSystemService {
     star: Star | null,
     planets: Planet[]
   ): Promise<StellarSystemResponseDto> {
+    // position JSON을 number[] 배열로 변환
+    let position: number[] = [0, 0, 0]; // 기본값
+    try {
+      if (system.position) {
+        let positionData: unknown;
+        if (Array.isArray(system.position)) {
+          positionData = system.position;
+        } else {
+          positionData = JSON.parse(system.position as string);
+        }
+        if (Array.isArray(positionData) && positionData.length >= 3) {
+          position = [
+            Number(positionData[0]) || 0,
+            Number(positionData[1]) || 0,
+            Number(positionData[2]) || 0,
+          ];
+        }
+      }
+    } catch (error) {
+      // JSON 파싱 실패 시 기본값 사용
+      console.warn(`Position parsing failed for system ${system.id}:`, error);
+    }
+
     // 소스 시스템들의 이름 조회 (항상 문자열 보장)
     let createSourceName: string = '';
     let originalSourceName: string = '';
@@ -448,6 +584,7 @@ export class StellarSystemService {
       id: system.id,
       title: system.title, // DB의 title을 프론트엔드의 title로 매핑
       galaxy_id: system.galaxy_id,
+      position, // 변환된 position 배열
       creator_id: system.creator_id,
       author_id: system.author_id,
       create_source_id: system.create_source_id ?? system.id,
