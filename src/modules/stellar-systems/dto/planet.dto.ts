@@ -22,6 +22,18 @@ import { InstrumentRole } from './common.dto';
 // SONA 오디오 제어 파라미터들 - 프론트엔드 PlanetProperties와 완전 호환
 export class PlanetPropertiesDto {
   // === 클라이언트와 일치하는 SONA 속성 ===
+  // 대표 예시 객체 (Swagger example 등에서 import하여 사용)
+  static example: PlanetPropertiesDto = {
+    planetSize: 0.45,
+    planetColor: 15,
+    planetBrightness: 3.8,
+    distanceFromStar: 5.2,
+    orbitSpeed: 0.7,
+    rotationSpeed: 0.4,
+    inclination: 23.5,
+    eccentricity: 0.3,
+    tilt: 5,
+  };
   @ApiProperty({
     description: '행성 크기 (Size)',
     minimum: 0.01,

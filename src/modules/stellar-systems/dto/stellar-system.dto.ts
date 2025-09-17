@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { StarResponseDto, StarForSystemDto } from './star.dto';
 import { PlanetResponseDto, PlanetPropertiesDto } from './planet.dto';
+import { StarPropertiesDto } from './star.dto';
 
 // Position 범위 검증을 위한 커스텀 validator
 // x: ±1000, y: ±20, z: ±1000
@@ -87,16 +88,7 @@ export class CreatePlanetForSystemDto {
   @ApiProperty({
     description: '행성의 SONA 오디오 속성',
     type: PlanetPropertiesDto,
-    example: {
-      planetSize: 0.45,
-      planetColor: 15,
-      planetBrightness: 3.8,
-      distanceFromStar: 5.2,
-      orbitSpeed: 0.7,
-      rotationSpeed: 0.4,
-      eccentricity: 0.3,
-      tilt: 5,
-    },
+    example: PlanetPropertiesDto.example,
   })
   @IsObject()
   @ValidateNested()
@@ -135,12 +127,7 @@ export class CreateStellarSystemDto {
     type: StarForSystemDto,
     example: {
       name: 'Central Star',
-      properties: {
-        spin: 50,
-        brightness: 75,
-        color: 60,
-        size: 50,
-      },
+      properties: StarPropertiesDto.example,
     },
   })
   @IsOptional()
@@ -157,16 +144,7 @@ export class CreateStellarSystemDto {
       {
         name: 'Rhythm Planet',
         role: 'DRUM',
-        properties: {
-          planetSize: 0.45,
-          planetColor: 15,
-          planetBrightness: 3.8,
-          distanceFromStar: 5.2,
-          orbitSpeed: 0.7,
-          rotationSpeed: 0.4,
-          eccentricity: 0.3,
-          tilt: 5,
-        },
+        properties: PlanetPropertiesDto.example,
       },
     ],
   })
@@ -221,30 +199,12 @@ export class UpdateStellarSystemDto {
       {
         name: 'Rhythm Planet',
         role: 'DRUM',
-        properties: {
-          planetSize: 0.45,
-          planetColor: 15,
-          planetBrightness: 3.8,
-          distanceFromStar: 5.2,
-          orbitSpeed: 0.7,
-          rotationSpeed: 0.4,
-          eccentricity: 0.3,
-          tilt: 5,
-        },
+        properties: PlanetPropertiesDto.example,
       },
       {
         name: 'Bass Planet',
         role: 'BASS',
-        properties: {
-          planetSize: 0.6,
-          planetColor: 240,
-          planetBrightness: 2.6,
-          distanceFromStar: 8.5,
-          orbitSpeed: 0.35,
-          rotationSpeed: 0.25,
-          eccentricity: 0.2,
-          tilt: 10,
-        },
+        properties: PlanetPropertiesDto.example,
       },
     ],
   })
@@ -343,16 +303,7 @@ export class StellarSystemResponseDto {
         name: '리듬 행성',
         object_type: 'PLANET',
         role: 'DRUM',
-        properties: {
-          planetSize: 0.45,
-          planetColor: 15,
-          planetBrightness: 3.8,
-          distanceFromStar: 5.2,
-          orbitSpeed: 0.7,
-          rotationSpeed: 0.4,
-          eccentricity: 0.3,
-          tilt: 5,
-        },
+        properties: PlanetPropertiesDto.example,
         created_at: '2025-09-17T10:30:00.000Z',
         updated_at: '2025-09-17T10:30:00.000Z',
       },
@@ -362,16 +313,7 @@ export class StellarSystemResponseDto {
         name: '베이스 행성',
         object_type: 'PLANET',
         role: 'BASS',
-        properties: {
-          planetSize: 0.6,
-          planetColor: 240,
-          planetBrightness: 2.6,
-          distanceFromStar: 8.5,
-          orbitSpeed: 0.35,
-          rotationSpeed: 0.25,
-          eccentricity: 0.2,
-          tilt: 10,
-        },
+        properties: PlanetPropertiesDto.example,
         created_at: '2025-09-17T10:30:00.000Z',
         updated_at: '2025-09-17T10:30:00.000Z',
       },
