@@ -12,6 +12,8 @@ import {
   UpdateStellarSystemDto,
   CloneStellarSystemDto,
   StellarSystemResponseDto,
+  MyStellarSystemItemDto,
+  MyStellarSystemsResponseDto,
 } from './dto/stellar-system.dto';
 import { StarPropertiesDto } from './dto/star.dto';
 import { PlanetPropertiesDto } from './dto/planet.dto';
@@ -509,12 +511,102 @@ export class StellarSystemService {
   }
 
   /**
-   * 내가 작성한 스텔라 카운트
+   * 내가 소유한 스텔라 시스템 개수 조회
    */
-  async countMyStellaSystem(userId: string): Promise<number> {
+  async countMyStellarSystems(userId: string): Promise<number> {
     return this.prisma.stellarSystem.count({
       where: { creator_id: userId },
     });
+  }
+
+  /**
+   * 내가 소유한 스텔라 시스템 목록 조회 (페이지네이션 지원)
+   * - 좋아요 수 기준으로 순위 계산
+   * - 행성 개수 계산
+   * - 현재 사용자의 좋아요 여부 확인
+   */
+  async getMyStellarSystems(
+    userId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<MyStellarSystemsResponseDto> {
+    // 페이지네이션 계산
+    const skip = (page - 1) * limit;
+
+    // 전체 개수 조회
+    const total = await this.prisma.stellarSystem.count({
+      where: { creator_id: userId },
+    });
+
+    // 내 스텔라 시스템들을 좋아요 수 기준으로 정렬하여 조회
+    const stellarSystems = await this.prisma.stellarSystem.findMany({
+      where: { creator_id: userId },
+      include: {
+        planets: {
+          select: { id: true }, // 행성 개수 계산용
+        },
+        likes: {
+          select: { id: true }, // 좋아요 개수 계산용
+        },
+      },
+      orderBy: [
+        {
+          likes: {
+            _count: 'desc', // 좋아요 수 기준 내림차순
+          },
+        },
+        {
+          created_at: 'desc', // 생성일 기준 내림차순 (보조 정렬)
+        },
+      ],
+      skip,
+      take: limit,
+    });
+
+    // 각 시스템의 순위 계산을 위해 전체 시스템의 좋아요 수 조회
+    const allSystemsWithLikes = await this.prisma.stellarSystem.findMany({
+      where: { creator_id: userId },
+      include: {
+        likes: {
+          select: { id: true },
+        },
+      },
+      orderBy: {
+        likes: {
+          _count: 'desc',
+        },
+      },
+    });
+
+    // 순위 맵 생성 (좋아요 수 기준)
+    const rankMap = new Map<string, number>();
+    allSystemsWithLikes.forEach((system, index) => {
+      rankMap.set(system.id, index + 1);
+    });
+
+    // 응답 데이터 구성
+    const data: MyStellarSystemItemDto[] = stellarSystems.map(system => ({
+      system: {
+        id: system.id,
+        title: system.title,
+        galaxy_id: system.galaxy_id,
+        creator_id: system.creator_id,
+        created_at: system.created_at,
+        updated_at: system.updated_at,
+      },
+      like_count: system.likes.length,
+      planet_count: system.planets.length,
+      rank: rankMap.get(system.id) || 0,
+    }));
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+      },
+    };
   }
 
   /**
