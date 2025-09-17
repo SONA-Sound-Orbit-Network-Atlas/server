@@ -252,11 +252,17 @@ export class StellarSystemResponseDto {
   @ApiProperty({ description: '현재 소유자 ID' })
   creator_id: string;
 
+  @ApiProperty({ description: '현재 소유자 이름' })
+  creator_name: string;
+
   @ApiProperty({
     description:
       '최초 생성자 ID (원작자). 클론 시 원본의 author_id를 계승합니다.',
   })
   author_id: string;
+
+  @ApiProperty({ description: '최초 생성자 이름 (원작자)' })
+  author_name: string;
 
   @ApiProperty({
     description:
@@ -341,6 +347,9 @@ export class MyStellarSystemItemDto {
 
   @ApiProperty({ description: '소유자 ID', example: 'usr_999' })
   creator_id: string;
+
+  @ApiProperty({ description: '소유자 이름', example: 'StarMaker123' })
+  creator_name: string;
 
   @ApiProperty({
     description: '생성 시간',
