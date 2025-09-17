@@ -155,27 +155,19 @@ export class LikesController {
               items: {
                 type: 'object',
                 properties: {
-                  system: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'string', example: 'sys_123' },
-                      title: {
-                        type: 'string',
-                        example: '켄타우루스 자리 알파',
-                      },
-                      galaxy_id: { type: 'string', example: 'gal_001' },
-                      creator_id: { type: 'string', example: 'usr_owner_01' },
-                      created_at: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-09-10T08:30:00.000Z',
-                      },
-                      updated_at: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-09-12T15:45:00.000Z',
-                      },
-                    },
+                  id: { type: 'string', example: 'sys_123' },
+                  title: { type: 'string', example: '켄타우루스 자리 알파' },
+                  galaxy_id: { type: 'string', example: 'gal_001' },
+                  creator_id: { type: 'string', example: 'usr_owner_01' },
+                  created_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-09-10T08:30:00.000Z',
+                  },
+                  updated_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-09-12T15:45:00.000Z',
                   },
                   planet_count: { type: 'integer', example: 5 },
                   liked_at: {
@@ -183,6 +175,7 @@ export class LikesController {
                     format: 'date-time',
                     example: '2025-09-16T12:03:22.000Z',
                   },
+                  is_liked: { type: 'boolean', example: true },
                 },
               },
             },
@@ -202,16 +195,15 @@ export class LikesController {
             value: {
               data: [
                 {
-                  system: {
-                    id: 'sys_123',
-                    title: '켄타우루스 자리 알파',
-                    galaxy_id: 'gal_001',
-                    creator_id: 'usr_owner_01',
-                    created_at: '2025-09-10T08:30:00.000Z',
-                    updated_at: '2025-09-12T15:45:00.000Z',
-                  },
+                  id: 'sys_123',
+                  title: '켄타우루스 자리 알파',
+                  galaxy_id: 'gal_001',
+                  creator_id: 'usr_owner_01',
+                  created_at: '2025-09-10T08:30:00.000Z',
+                  updated_at: '2025-09-12T15:45:00.000Z',
                   planet_count: 5,
                   liked_at: '2025-09-16T12:03:22.000Z',
+                  is_liked: true,
                 },
               ],
               meta: { page: 1, limit: 20, total: 132 },
@@ -303,28 +295,24 @@ export class LikesController {
               items: {
                 type: 'object',
                 properties: {
-                  system: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'string', example: 'sys_987' },
-                      title: { type: 'string', example: '안드로메다-7' },
-                      galaxy_id: { type: 'string', example: 'gal_777' },
-                      creator_id: { type: 'string', example: 'usr_999' },
-                      created_at: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-08-01T00:00:00.000Z',
-                      },
-                      updated_at: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-09-10T00:00:00.000Z',
-                      },
-                    },
+                  id: { type: 'string', example: 'sys_987' },
+                  title: { type: 'string', example: '안드로메다-7' },
+                  galaxy_id: { type: 'string', example: 'gal_777' },
+                  creator_id: { type: 'string', example: 'usr_999' },
+                  created_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-08-01T00:00:00.000Z',
                   },
-                  like_count: { type: 'integer', example: 42 },
+                  updated_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-09-10T00:00:00.000Z',
+                  },
                   planet_count: { type: 'integer', example: 9 },
+                  like_count: { type: 'integer', example: 42 },
                   rank: { type: 'integer', example: 1 },
+                  is_liked: { type: 'boolean', example: false },
                 },
               },
             },
@@ -341,30 +329,28 @@ export class LikesController {
         example: {
           data: [
             {
-              system: {
-                id: 'sys_987',
-                title: '안드로메다-7',
-                galaxy_id: 'gal_777',
-                creator_id: 'usr_999',
-                created_at: '2025-08-01T00:00:00.000Z',
-                updated_at: '2025-09-10T00:00:00.000Z',
-              },
-              like_count: 42,
+              id: 'sys_987',
+              title: '안드로메다-7',
+              galaxy_id: 'gal_777',
+              creator_id: 'usr_999',
+              created_at: '2025-08-01T00:00:00.000Z',
+              updated_at: '2025-09-10T00:00:00.000Z',
               planet_count: 9,
+              like_count: 42,
               rank: 1,
+              is_liked: false,
             },
             {
-              system: {
-                id: 'sys_654',
-                title: '페가수스-3',
-                galaxy_id: 'gal_222',
-                creator_id: 'usr_555',
-                created_at: '2025-07-11T00:00:00.000Z',
-                updated_at: '2025-09-09T00:00:00.000Z',
-              },
-              like_count: 37,
+              id: 'sys_654',
+              title: '페가수스-3',
+              galaxy_id: 'gal_222',
+              creator_id: 'usr_555',
+              created_at: '2025-07-11T00:00:00.000Z',
+              updated_at: '2025-09-09T00:00:00.000Z',
               planet_count: 6,
+              like_count: 37,
               rank: 2,
+              is_liked: false,
             },
           ],
           meta: { page: 1, limit: 20, total: 250 },
@@ -398,28 +384,24 @@ export class LikesController {
               items: {
                 type: 'object',
                 properties: {
-                  system: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'string', example: 'sys_TOP1' },
-                      title: { type: 'string', example: '오리온-프라임' },
-                      galaxy_id: { type: 'string', example: 'gal_TOP' },
-                      creator_id: { type: 'string', example: 'usr_AAA' },
-                      created_at: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-01-01T00:00:00.000Z',
-                      },
-                      updated_at: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-09-14T00:00:00.000Z',
-                      },
-                    },
+                  id: { type: 'string', example: 'sys_TOP1' },
+                  title: { type: 'string', example: '오리온-프라임' },
+                  galaxy_id: { type: 'string', example: 'gal_TOP' },
+                  creator_id: { type: 'string', example: 'usr_AAA' },
+                  created_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-01-01T00:00:00.000Z',
                   },
-                  like_count: { type: 'integer', example: 1234 },
+                  updated_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-09-14T00:00:00.000Z',
+                  },
                   planet_count: { type: 'integer', example: 12 },
+                  like_count: { type: 'integer', example: 1234 },
                   rank: { type: 'integer', example: 1 },
+                  is_liked: { type: 'boolean', example: false },
                 },
               },
             },
@@ -436,17 +418,16 @@ export class LikesController {
         example: {
           data: [
             {
-              system: {
-                id: 'sys_TOP1',
-                title: '오리온-프라임',
-                galaxy_id: 'gal_TOP',
-                creator_id: 'usr_AAA',
-                created_at: '2025-01-01T00:00:00.000Z',
-                updated_at: '2025-09-14T00:00:00.000Z',
-              },
-              like_count: 1234,
+              id: 'sys_TOP1',
+              title: '오리온-프라임',
+              galaxy_id: 'gal_TOP',
+              creator_id: 'usr_AAA',
+              created_at: '2025-01-01T00:00:00.000Z',
+              updated_at: '2025-09-14T00:00:00.000Z',
               planet_count: 12,
+              like_count: 1234,
               rank: 1,
+              is_liked: false,
             },
           ],
           meta: { page: 1, limit: 20, total: 1000 },
@@ -478,24 +459,19 @@ export class LikesController {
               items: {
                 type: 'object',
                 properties: {
-                  system: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'string', example: 'sys_777' },
-                      title: { type: 'string', example: '카시오페이아-β' },
-                      galaxy_id: { type: 'string', example: 'gal_900' },
-                      creator_id: { type: 'string', example: 'usr_XYZ' },
-                      created_at: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-05-01T00:00:00.000Z',
-                      },
-                      updated_at: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-08-31T00:00:00.000Z',
-                      },
-                    },
+                  id: { type: 'string', example: 'sys_777' },
+                  title: { type: 'string', example: '카시오페이아-β' },
+                  galaxy_id: { type: 'string', example: 'gal_900' },
+                  creator_id: { type: 'string', example: 'usr_XYZ' },
+                  created_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-05-01T00:00:00.000Z',
+                  },
+                  updated_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-08-31T00:00:00.000Z',
                   },
                   planet_count: { type: 'integer', example: 3 },
                   liked_at: {
@@ -503,6 +479,7 @@ export class LikesController {
                     format: 'date-time',
                     example: '2025-09-15T04:12:34.000Z',
                   },
+                  is_liked: { type: 'boolean', example: false },
                 },
               },
             },
@@ -519,16 +496,15 @@ export class LikesController {
         example: {
           data: [
             {
-              system: {
-                id: 'sys_777',
-                title: '카시오페이아-β',
-                galaxy_id: 'gal_900',
-                creator_id: 'usr_XYZ',
-                created_at: '2025-05-01T00:00:00.000Z',
-                updated_at: '2025-08-31T00:00:00.000Z',
-              },
+              id: 'sys_777',
+              title: '카시오페이아-β',
+              galaxy_id: 'gal_900',
+              creator_id: 'usr_XYZ',
+              created_at: '2025-05-01T00:00:00.000Z',
+              updated_at: '2025-08-31T00:00:00.000Z',
               planet_count: 3,
               liked_at: '2025-09-15T04:12:34.000Z',
+              is_liked: false,
             },
           ],
           meta: { page: 1, limit: 20, total: 12 },
