@@ -23,16 +23,17 @@ export enum RangkType {
   MONTHL = 'month',
   YEAR = 'year',
   RANDOM = 'random',
+  TOTAL = 'total',
 }
 
 export class LikeRankingDto extends PaginationDto {
   @ApiProperty({
-    description: '랭킹 타입 (week, month, year, random)',
+    description: '랭킹 타입 (week, month, year, random, total)',
     example: 'week',
     required: false,
     enum: RangkType,
     default: RangkType.WEEK,
   })
   @IsString()
-  rangk_type?: RangkType = RangkType.WEEK;
+  rank_type?: RangkType = RangkType.WEEK;
 }

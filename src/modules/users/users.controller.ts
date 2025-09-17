@@ -7,8 +7,6 @@ import {
   Delete,
   Query,
   UseGuards,
-  HttpCode,
-  HttpStatus,
   UseInterceptors,
   UploadedFile,
   Post,
@@ -23,6 +21,8 @@ import {
   ApiQuery,
   ApiConsumes,
   ApiBody,
+  ApiOkResponse,
+  getSchemaPath,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import {
@@ -35,8 +35,9 @@ import {
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { User } from '../../auth/decorator/user.decorator';
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageFileParsePipe } from './images/image-file.pipe';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
 /**
  * 사용자 관리 API 컨트롤러
@@ -217,10 +218,22 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '프로필 이미지 업로드/교체' })
-  @ApiResponse({
-    status: 200,
+  @ApiOkResponse({
     description: '이미지 등록 성공',
-    type: UserResponseDto,
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(UserResponseDto) },
+        example: {
+          id: 'usr_123',
+          username: 'astro_dev',
+          email: 'astro@example.com',
+          about: 'Synth & space lover',
+          image: 'https://cdn.example.com/users/usr_123/avatar_20250916.png',
+          created_at: '2025-08-20T09:00:00.000Z',
+          updated_at: '2025-09-16T12:34:56.000Z',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -231,12 +244,14 @@ export class UsersController {
   @ApiBody({
     schema: {
       type: 'object',
-      properties: { file: { type: 'string', format: 'binary' } },
-      required: ['file'],
+      properties: {
+        img: { type: 'string', format: 'binary' },
+      },
+      required: ['img'],
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadImage(
+  @UseInterceptors(FileInterceptor('img', { storage: memoryStorage() }))
+  async uploadAvatar(
     @User('id') userId: string,
     @UploadedFile(new ImageFileParsePipe()) file: Express.Multer.File
   ) {

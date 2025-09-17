@@ -270,12 +270,12 @@ export class LikesController {
 
   @Get('rankings')
   @ApiOperation({
-    summary: '좋아요 랭킹 조회 (주/월/년/랜덤)',
+    summary: '좋아요 랭킹 조회 (전체/주/월/년/랜덤)',
     description:
       'KST 달력 기준으로 집계. rank_type이 random이면 무작위 시스템을 반환.',
   })
   @ApiQuery({
-    name: 'rangk_type',
+    name: 'rank_type',
     required: false,
     enum: RangkType,
     example: RangkType.WEEK,
@@ -358,87 +358,18 @@ export class LikesController {
       },
     },
   })
+  @ApiResponse({
+    status: 500,
+    description: '잘 못된 요청',
+    type: ErrorResponseDto,
+  })
   @UseGuards(OptionalJwtAuthGuard)
   async getLikeRankings(
     @Req() req: any,
-    @Query() dto: PaginationDto & { rangk_type?: RangkType }
+    @Query() dto: PaginationDto & { rank_type?: RangkType }
   ) {
     const viewerId: string | undefined = req.user?.id; // 로그인 안 했으면 undefined
     return this.likesService.getLikeRankings(dto, viewerId);
-  }
-
-  /** 전체(올타임) 좋아요 Top 랭킹 — 공개 */
-  @Get('rankings-top')
-  @ApiOperation({ summary: '전체(올타임) 좋아요 Top 랭킹' })
-  @ApiQuery({ name: 'page', required: false, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, example: 20 })
-  @ApiOkResponse({
-    description: '조회 성공',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          properties: {
-            data: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string', example: 'sys_TOP1' },
-                  title: { type: 'string', example: '오리온-프라임' },
-                  galaxy_id: { type: 'string', example: 'gal_TOP' },
-                  creator_id: { type: 'string', example: 'usr_AAA' },
-                  created_at: {
-                    type: 'string',
-                    format: 'date-time',
-                    example: '2025-01-01T00:00:00.000Z',
-                  },
-                  updated_at: {
-                    type: 'string',
-                    format: 'date-time',
-                    example: '2025-09-14T00:00:00.000Z',
-                  },
-                  planet_count: { type: 'integer', example: 12 },
-                  like_count: { type: 'integer', example: 1234 },
-                  rank: { type: 'integer', example: 1 },
-                  is_liked: { type: 'boolean', example: false },
-                },
-              },
-            },
-            meta: {
-              type: 'object',
-              properties: {
-                page: { type: 'integer', example: 1 },
-                limit: { type: 'integer', example: 20 },
-                total: { type: 'integer', example: 1000 },
-              },
-            },
-          },
-        },
-        example: {
-          data: [
-            {
-              id: 'sys_TOP1',
-              title: '오리온-프라임',
-              galaxy_id: 'gal_TOP',
-              creator_id: 'usr_AAA',
-              created_at: '2025-01-01T00:00:00.000Z',
-              updated_at: '2025-09-14T00:00:00.000Z',
-              planet_count: 12,
-              like_count: 1234,
-              rank: 1,
-              is_liked: false,
-            },
-          ],
-          meta: { page: 1, limit: 20, total: 1000 },
-        },
-      },
-    },
-  })
-  @UseGuards(OptionalJwtAuthGuard)
-  async getTopLiked(@Req() req: any, @Query() dto: PaginationDto) {
-    const viewerId: string | undefined = req.user?.id;
-    return this.likesService.getTopLikedSystems(dto, viewerId);
   }
 
   /**
