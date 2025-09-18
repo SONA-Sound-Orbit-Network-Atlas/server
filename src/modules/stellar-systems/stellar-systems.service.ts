@@ -531,6 +531,9 @@ export class StellarSystemService {
     const stellarSystems = await this.prisma.stellarSystem.findMany({
       where: { creator_id: userId },
       include: {
+        creator: {
+          select: { username: true }, // 사용자명 포함
+        },
         planets: {
           select: { id: true }, // 행성 개수 계산용
         },
@@ -579,6 +582,7 @@ export class StellarSystemService {
       title: system.title,
       galaxy_id: system.galaxy_id,
       creator_id: system.creator_id,
+      creator_name: system.creator.username, // 사용자 이름 포함
       created_at: system.created_at,
       updated_at: system.updated_at,
       like_count: system.likes.length,
