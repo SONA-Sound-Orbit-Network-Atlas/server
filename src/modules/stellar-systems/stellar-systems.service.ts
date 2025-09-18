@@ -666,7 +666,7 @@ export class StellarSystemService {
     // 사용자 이름 조회
     let creatorName = '';
     let authorName = '';
-    
+
     // creator와 author가 같은 경우 한번만 조회
     if (system.creator_id === system.author_id) {
       const user = await this.prisma.user.findUnique({

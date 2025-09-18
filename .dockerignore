@@ -29,3 +29,10 @@ yarn-error.log*
 
 # Uploads (mounted as volume in production)
 uploads
+
+# SSL keys/certs should never be baked into images
+ssl
+
+# Prisma local DB files (if used)
+*.db
+*.db-journal
