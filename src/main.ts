@@ -13,6 +13,7 @@ async function bootstrap() {
 
   // CORS 설정 (운영 도메인 환경변수로 동적 허용)
   // FRONTEND_URL="http://a.com,http://b.com" 형태 지원
+  /*
   const frontendEnv = process.env.FRONTEND_URL || '';
   const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173'];
   const origins = frontendEnv
@@ -21,6 +22,17 @@ async function bootstrap() {
         .map(o => o.trim())
         .filter(Boolean)
     : defaultOrigins;
+  app.enableCors({
+    origin: origins,
+    credentials: true,
+  });
+  */
+  const origins = [
+    'https://sona-sound.vercel.app', // 운영 배포 주소
+    'http://localhost:3000', // 로컬 React
+    'http://localhost:5173', // 로컬 Vite
+  ];
+
   app.enableCors({
     origin: origins,
     credentials: true,
