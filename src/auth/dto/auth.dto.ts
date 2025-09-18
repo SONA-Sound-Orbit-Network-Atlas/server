@@ -4,8 +4,9 @@ import {
   IsString,
   MinLength,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
  * 회원가입 요청 DTO
@@ -45,17 +46,14 @@ export class CreateUserDto {
   password: string;
 }
 
-/**
- * 로그인 요청 DTO
- **/
 export class LoginDto {
   @ApiProperty({
-    description: '사용자 이메일',
-    example: 'user@example.com',
+    description: '사용자 이메일 또는 사용자명',
+    example: 'user@example.com 또는 testuser',
   })
-  @IsEmail({}, { message: '올바른 이메일 형식이 아닙니다.' })
-  @IsNotEmpty({ message: '이메일은 필수입니다.' })
-  email: string;
+  @IsString({ message: '이메일 또는 사용자명은 문자열이어야 합니다.' })
+  @IsNotEmpty({ message: '이메일 또는 사용자명을 입력해야 합니다.' })
+  identifier: string;
 
   @ApiProperty({
     description: '사용자 비밀번호',
@@ -95,17 +93,3 @@ export class LoginResponseDto {
     updated_at: Date;
   };
 }
-
-/**
- * 로그아웃 요청 DTO (임시)
- */
-export class LogoutDto {
-  @ApiProperty({
-    description: '사용자 ID',
-    example: '1a2b3c4d5e6f',
-  })
-  @IsNotEmpty({ message: '사용자 ID는 필수입니다.' })
-  userId: string; 
-}
-
-

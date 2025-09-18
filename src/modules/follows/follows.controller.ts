@@ -18,14 +18,23 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiQuery,
+  ApiResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { CreateFollowDto, DeleteFollowDto } from './dto/follows.dto';
+import {
+  CreateFollowDto,
+  DeleteFollowDto,
+  FollowersListResponseDto,
+  FollowingsListResponseDto,
+} from './dto/follows.dto';
 import { User } from '../../auth/decorator/user.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { OptionalJwtAuthGuard } from '../../auth/optional-jwt.guard';
+import { ErrorResponseDto } from '../../common/dto/error-response.dto';
 
 @ApiTags('팔로우 정보 관리')
 @Controller('follows')
@@ -337,368 +346,132 @@ export class FollowsController {
   async getUserStats(@Param('userId') userId: string) {
     return this.followsService.getStats(userId);
   }
-
-  /*
-   * 나를 팔로우하는 사람들 (팔로워 목록)
-   */
-  @Get('me/followers')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: '나의 팔로워 목록' })
+  @Get(':targetId/followers')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary: '상대 프로필의 팔로워 목록',
+    description:
+      '프로필 주인(:targetId)을 팔로우하는 사용자 목록을 반환합니다. ' +
+      '로그인 사용자(viewer)가 전달되면 각 항목에 viewer 기준 플래그(viewer_is_following, viewer_is_followed_by, isMutual)가 포함됩니다.',
+  })
+  @ApiParam({
+    name: 'targetId',
+    description: '프로필 주인의 사용자 ID(예: 상대방 ID)',
+    example: 'usr_target_01',
+  })
   @ApiQuery({
     name: 'page',
     required: false,
-    description: '페이지 번호',
     example: 1,
+    description: '페이지 번호(1-base)',
   })
   @ApiQuery({
     name: 'limit',
     required: false,
-    description: '페이지당 항목 수',
     example: 20,
+    description: '페이지당 항목 수(최대 100)',
   })
   @ApiOkResponse({
     description: '조회 성공',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          properties: {
-            meta: {
-              type: 'object',
-              properties: {
-                page: { type: 'integer', example: 1 },
-                limit: { type: 'integer', example: 20 },
-                total: { type: 'integer', example: 132 },
-              },
-            },
-            items: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string', example: 'cmf_user_010' },
-                  username: { type: 'string', example: 'yuna' },
-                  email: { type: 'string', example: 'yuna@example.com' },
-                  about: {
-                    type: 'string',
-                    nullable: true,
-                    example: '안녕하세요',
-                  },
-                  created_at: {
-                    type: 'string',
-                    format: 'date-time',
-                    example: '2025-09-12T09:10:11.000Z',
-                  },
-                  isMutual: { type: 'boolean', example: true },
-                },
-              },
-            },
+    schema: {
+      example: {
+        meta: { page: 1, limit: 20, total: 2 },
+        items: [
+          {
+            id: 'usr_c',
+            username: 'charlie',
+            viewer_is_following: true, // 뷰어(A) → charlie 팔로우 중
+            viewer_is_followed_by: false, // charlie → 뷰어(A) 팔로우 아님
+            isMutual: false,
           },
-        },
-        examples: {
-          normal: {
-            summary: '정상 목록',
-            value: {
-              meta: { page: 1, limit: 20, total: 132 },
-              items: [
-                {
-                  id: 'cmf_user_010',
-                  username: 'yuna',
-                  email: 'yuna@example.com',
-                  about: '안녕하세요',
-                  created_at: '2025-09-12T09:10:11.000Z',
-                  isMutual: true,
-                },
-              ],
-            },
+          {
+            id: 'usr_d',
+            username: 'diana',
+            viewer_is_following: true,
+            viewer_is_followed_by: true, // diana → 뷰어(A) 팔로우 중
+            isMutual: true, // 맞팔
           },
-          empty: {
-            summary: '빈 결과',
-            value: { meta: { page: 1, limit: 20, total: 0 }, items: [] },
-          },
-        },
+        ],
       },
     },
+    type: FollowersListResponseDto,
   })
-  @ApiUnauthorizedResponse({
-    description: '인증 실패',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          properties: {
-            statusCode: { type: 'integer' },
-            message: { type: 'string' },
-            error: { type: 'string' },
-          },
-        },
-        example: {
-          statusCode: 401,
-          message: '인증이 필요합니다.',
-          error: 'Unauthorized',
-        },
-      },
-    },
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 (page/limit 등 검증 실패)',
+    type: ErrorResponseDto,
   })
-  async getMyFollowers(@User('id') me: string, @Query() q: PaginationDto) {
-    return this.followsService.getFollowers(me, q);
-  }
-
-  /*
-   * 내가 팔로우하는 사람들 (팔로잉 목록)
-   */
-  @Get('me/followings')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: '나의 팔로잉 목록' })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    description: '페이지 번호',
-    example: 1,
+  @ApiResponse({
+    status: 404,
+    description: '대상 사용자(:targetId) 없음',
+    type: ErrorResponseDto,
   })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: '페이지당 항목 수',
-    example: 20,
-  })
-  @ApiOkResponse({
-    description: '조회 성공',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          properties: {
-            meta: {
-              type: 'object',
-              properties: {
-                page: { type: 'integer', example: 1 },
-                limit: { type: 'integer', example: 20 },
-                total: { type: 'integer', example: 25 },
-              },
-            },
-            items: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string', example: 'cmg_user_002' },
-                  username: { type: 'string', example: 'geo' },
-                  email: { type: 'string', example: 'geo@example.com' },
-                  about: { type: 'string', nullable: true, example: null },
-                  created_at: {
-                    type: 'string',
-                    format: 'date-time',
-                    example: '2025-09-10T12:34:56.000Z',
-                  },
-                  isMutual: { type: 'boolean', example: false },
-                },
-              },
-            },
-          },
-        },
-        examples: {
-          normal: {
-            summary: '정상 목록',
-            value: {
-              meta: { page: 1, limit: 20, total: 25 },
-              items: [
-                {
-                  id: 'cmg_user_002',
-                  username: 'geo',
-                  email: 'geo@example.com',
-                  about: null,
-                  created_at: '2025-09-10T12:34:56.000Z',
-                  isMutual: false,
-                },
-              ],
-            },
-          },
-          empty: {
-            summary: '빈 결과',
-            value: { meta: { page: 1, limit: 20, total: 0 }, items: [] },
-          },
-        },
-      },
-    },
-  })
-  @ApiUnauthorizedResponse({
-    description: '인증 실패',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          properties: {
-            statusCode: { type: 'integer' },
-            message: { type: 'string' },
-            error: { type: 'string' },
-          },
-        },
-        example: {
-          statusCode: 401,
-          message: '인증이 필요합니다.',
-          error: 'Unauthorized',
-        },
-      },
-    },
-  })
-  async getMyFollowings(@User('id') me: string, @Query() q: PaginationDto) {
-    return this.followsService.getFollowings(me, q);
-  }
-
-  /*
-   * 특정 사용자 팔로워 목록
-   */
-  @Get(':userId/followers')
-  @ApiOperation({ summary: '특정 사용자 팔로워 목록' })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    description: '페이지 번호',
-    example: 1,
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: '페이지당 항목 수',
-    example: 20,
-  })
-  @ApiOkResponse({
-    description: '조회 성공',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          properties: {
-            meta: {
-              type: 'object',
-              properties: {
-                page: { type: 'integer', example: 1 },
-                limit: { type: 'integer', example: 20 },
-                total: { type: 'integer', example: 7 },
-              },
-            },
-            items: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string', example: 'cmf_user_003' },
-                  username: { type: 'string', example: 'alice' },
-                  email: { type: 'string', example: 'alice@example.com' },
-                  about: { type: 'string', nullable: true, example: null },
-                  created_at: {
-                    type: 'string',
-                    format: 'date-time',
-                    example: '2025-09-13T08:00:00.000Z',
-                  },
-                  isMutual: { type: 'boolean', example: false },
-                },
-              },
-            },
-          },
-        },
-        example: {
-          meta: { page: 1, limit: 20, total: 7 },
-          items: [
-            {
-              id: 'cmf_user_003',
-              username: 'alice',
-              email: 'alice@example.com',
-              about: null,
-              created_at: '2025-09-13T08:00:00.000Z',
-              isMutual: false,
-            },
-          ],
-        },
-      },
-    },
-  })
-  async getUserFollowers(
-    @Param('userId') userId: string,
+  getFollowersOf(
+    @Param('targetId') targetId: string,
+    @User('id') viewerId: string | undefined,
     @Query() q: PaginationDto
   ) {
-    return this.followsService.getFollowers(userId, q);
+    return this.followsService.getFollowersOf(targetId, q, viewerId, true); // 비로그인 false로 채움
   }
 
-  /*
-   * 특정 사용자가 팔로잉하는 사람들 목록
-   */
-  @Get(':userId/followings')
-  @ApiOperation({ summary: '특정 사용자 팔로잉 목록' })
+  @Get(':targetId/followings')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary: '상대 프로필의 팔로잉 목록',
+    description:
+      '프로필 주인(:targetId)이 팔로우하는 사용자 목록을 반환합니다. ' +
+      '로그인 사용자(viewer)가 전달되면 각 항목에 viewer 기준 플래그가 포함됩니다.',
+  })
+  @ApiParam({
+    name: 'targetId',
+    description: '프로필 주인의 사용자 ID(예: 상대방 ID)',
+    example: 'usr_target_01',
+  })
   @ApiQuery({
     name: 'page',
     required: false,
-    description: '페이지 번호',
     example: 1,
+    description: '페이지 번호(1-base)',
   })
   @ApiQuery({
     name: 'limit',
     required: false,
-    description: '페이지당 항목 수',
     example: 20,
+    description: '페이지당 항목 수(최대 100)',
   })
   @ApiOkResponse({
     description: '조회 성공',
-    content: {
-      'application/json': {
-        schema: {
-          type: 'object',
-          properties: {
-            meta: {
-              type: 'object',
-              properties: {
-                page: { type: 'integer', example: 1 },
-                limit: { type: 'integer', example: 20 },
-                total: { type: 'integer', example: 3 },
-              },
-            },
-            items: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string', example: 'cmh_user_099' },
-                  username: { type: 'string', example: 'bob' },
-                  email: { type: 'string', example: 'bob@example.com' },
-                  about: {
-                    type: 'string',
-                    nullable: true,
-                    example: '노래 좋아해요',
-                  },
-                  created_at: {
-                    type: 'string',
-                    format: 'date-time',
-                    example: '2025-09-11T10:20:00.000Z',
-                  },
-                  isMutual: { type: 'boolean', example: true },
-                },
-              },
-            },
+    schema: {
+      example: {
+        meta: { page: 1, limit: 20, total: 1 },
+        items: [
+          {
+            id: 'usr_e',
+            username: 'edward',
+            viewer_is_following: false, // 뷰어(A) → edward 팔로우 아님
+            viewer_is_followed_by: true, // edward → 뷰어(A) 팔로우 중
+            isMutual: false,
           },
-        },
-        example: {
-          meta: { page: 1, limit: 20, total: 3 },
-          items: [
-            {
-              id: 'cmh_user_099',
-              username: 'bob',
-              email: 'bob@example.com',
-              about: '노래 좋아해요',
-              created_at: '2025-09-11T10:20:00.000Z',
-              isMutual: true,
-            },
-          ],
-        },
+        ],
       },
     },
+    type: FollowingsListResponseDto,
   })
-  async getUserFollowings(
-    @Param('userId') userId: string,
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 (page/limit 등 검증 실패)',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '대상 사용자(:targetId) 없음',
+    type: ErrorResponseDto,
+  })
+  getFollowingsOf(
+    @Param('targetId') targetId: string,
+    @User('id') viewerId: string | undefined,
     @Query() q: PaginationDto
   ) {
-    return this.followsService.getFollowings(userId, q);
+    return this.followsService.getFollowingsOf(targetId, q, viewerId, true);
   }
 }

@@ -14,6 +14,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiCreatedResponse,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto, CreateUserDto, LoginResponseDto } from './dto/auth.dto';
@@ -35,9 +36,67 @@ export class AuthController {
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: '사용자 회원가입' })
-  @ApiResponse({
-    status: 201,
+  @ApiCreatedResponse({
     description: '회원가입 성공',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            message: {
+              type: 'string',
+              example: '회원가입이 완료되었습니다.',
+              description: '결과 메시지',
+            },
+            user: {
+              type: 'object',
+              description: '생성된 사용자 정보 (비밀번호 제외)',
+              properties: {
+                id: {
+                  type: 'string',
+                  example: 'usr_7h3x2k9q',
+                  description: '사용자 고유 ID',
+                },
+                email: {
+                  type: 'string',
+                  example: 'user@example.com',
+                  description: '사용자 이메일',
+                },
+                username: {
+                  type: 'string',
+                  example: 'username123',
+                  description: '사용자명',
+                },
+                created_at: {
+                  type: 'string',
+                  format: 'date-time',
+                  example: '2025-09-18T10:00:00.000Z',
+                  description: '계정 생성 시각',
+                },
+                updated_at: {
+                  type: 'string',
+                  format: 'date-time',
+                  example: '2025-09-18T10:00:00.000Z',
+                  description: '마지막 수정 시각',
+                },
+              },
+              required: ['id', 'email', 'username', 'created_at', 'updated_at'],
+            },
+          },
+          required: ['message', 'user'],
+        },
+        example: {
+          message: '회원가입이 완료되었습니다.',
+          user: {
+            id: 'usr_7h3x2k9q',
+            email: 'user@example.com',
+            username: 'username123',
+            created_at: '2025-09-18T10:00:00.000Z',
+            updated_at: '2025-09-18T10:00:00.000Z',
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 400,
@@ -64,11 +123,28 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: '로그인 성공',
-    type: LoginResponseDto,
+    schema: {
+      example: {
+        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        user: {
+          id: 'usr_12345',
+          email: 'test@example.com',
+          username: 'testuser',
+          about: '안녕하세요, 저는 사용자입니다.',
+          created_at: '2025-09-18T10:00:00.000Z',
+          updated_at: '2025-09-18T10:30:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 (형식 오류)',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 401,
-    description: '로그인 실패',
+    description: '로그인 실패 (사용자 없음/비밀번호 불일치)',
     type: ErrorResponseDto,
   })
   async login(@Body() body: LoginDto): Promise<LoginResponseDto> {

@@ -24,7 +24,7 @@ type SystemListItem = {
   like_count?: number;
   liked_at?: Date;
   rank?: number;
-
+  creator_name?: string;
   // 현재 조회자(viewer)가 좋아요 눌렀는지
   is_liked?: boolean;
 };
@@ -106,7 +106,10 @@ export class LikesService {
       _count?: { planets?: number };
     },
     extra: Partial<
-      Pick<SystemListItem, 'like_count' | 'liked_at' | 'rank' | 'is_liked'>
+      Pick<
+        SystemListItem,
+        'like_count' | 'liked_at' | 'rank' | 'is_liked' | 'creator_name'
+      >
     > = {}
   ): SystemListItem {
     return {
@@ -144,7 +147,8 @@ export class LikesService {
               creator_id: true,
               created_at: true,
               updated_at: true,
-              _count: { select: { planets: true } },
+              _count: { select: { planets: true, likes: true } },
+              creator: { select: { username: true } },
             },
           },
           created_at: true, // liked_at 소스
@@ -156,7 +160,9 @@ export class LikesService {
     const data: SystemListItem[] = rows.map(row =>
       this.toSystemListItem(row.system as any, {
         liked_at: row.created_at,
+        like_count: row.system._count.likes,
         is_liked: true, // 내가 좋아요한 목록이므로 항상 true
+        creator_name: row.system.creator?.username ?? undefined,
       })
     );
 
@@ -170,10 +176,10 @@ export class LikesService {
    * @param viewerId 현재 조회자(선택). 전달되면 is_liked 계산.
    */
   // 실제 DB 테이블/컬럼명 상수 (@@map 기준)
-  T_STELLAR = Prisma.raw(`"stellar_systems"`);
-  T_LIKE = Prisma.raw(`"likes"`);
-  C_CREATED_AT = Prisma.raw(`"created_at"`);
-  C_SYSTEM_ID = Prisma.raw(`"system_id"`);
+  private readonly T_STELLAR = Prisma.raw(`"stellar_systems"`);
+  private readonly T_LIKE = Prisma.raw(`"likes"`);
+  private readonly C_CREATED_AT = Prisma.raw(`"created_at"`);
+  private readonly C_SYSTEM_ID = Prisma.raw(`"system_id"`);
 
   async getLikeRankings(
     dto: PaginationDto & {
@@ -222,6 +228,9 @@ export class LikesService {
           created_at: true,
           updated_at: true,
           _count: { select: { planets: true } },
+          creator: {
+            select: { username: true },
+          },
         },
       });
       const sysMap = new Map(systems.map(s => [s.id, s]));
@@ -243,6 +252,7 @@ export class LikesService {
             like_count: r.like_count,
             rank: idx + 1,
             is_liked: viewerId ? likedSet.has(s.id) : false,
+            creator_name: s.creator?.username ?? undefined,
           });
         })
         .filter(Boolean) as SystemListItem[];
@@ -323,7 +333,10 @@ export class LikesService {
         creator_id: true,
         created_at: true,
         updated_at: true,
-        _count: { select: { planets: true } }, // like_count는 rows 값 사용
+        _count: { select: { planets: true } },
+        creator: {
+          select: { username: true },
+        },
       },
     });
     const systemMap = new Map(systems.map(s => [s.id, s]));
@@ -345,6 +358,7 @@ export class LikesService {
           like_count: r.like_count,
           rank: skip + idx + 1,
           is_liked: viewerId ? likedSet.has(s.id) : false,
+          creator_name: s.creator?.username ?? undefined,
         });
       })
       .filter(Boolean) as SystemListItem[];
