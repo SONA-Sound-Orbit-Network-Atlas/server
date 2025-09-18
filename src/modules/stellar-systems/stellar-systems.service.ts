@@ -488,38 +488,24 @@ export class StellarSystemService {
    * 스텔라 시스템 삭제 (항성도 함께 자동 삭제)
    */
   async deleteStellarSystem(id: string, userId: string): Promise<void> {
-    console.log(
-      `[DELETE] Attempting to delete stellar system: ${id} by user: ${userId}`
-    );
-
     // 소유자 확인
     const system = await this.prisma.stellarSystem.findUnique({
       where: { id },
-      select: { id: true, creator_id: true, title: true },
+      select: { id: true, creator_id: true },
     });
 
-    console.log(`[DELETE] Found system:`, system);
-
     if (!system) {
-      console.log(`[DELETE] System not found: ${id}`);
       throw new NotFoundException('스텔라 시스템을 찾을 수 없습니다.');
     }
 
     if (system.creator_id !== userId) {
-      console.log(
-        `[DELETE] Permission denied. System owner: ${system.creator_id}, Current user: ${userId}`
-      );
       throw new ForbiddenException('이 스텔라 시스템에 대한 권한이 없습니다.');
     }
-
-    console.log(`[DELETE] Deleting system: ${system.title} (${id})`);
 
     // 삭제 (Star, Planet은 외래키 제약으로 연쇄 삭제됨)
     await this.prisma.stellarSystem.delete({
       where: { id },
     });
-
-    console.log(`[DELETE] Successfully deleted system: ${id}`);
   }
 
   /**
@@ -545,6 +531,9 @@ export class StellarSystemService {
     const stellarSystems = await this.prisma.stellarSystem.findMany({
       where: { creator_id: userId },
       include: {
+        creator: {
+          select: { username: true }, // 사용자명 포함
+        },
         planets: {
           select: { id: true }, // 행성 개수 계산용
         },
@@ -587,20 +576,13 @@ export class StellarSystemService {
       rankMap.set(system.id, index + 1);
     });
 
-    // 현재 사용자 이름 조회
-    const currentUser = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { username: true },
-    });
-    const creatorName = currentUser?.username ?? '';
-
     // 응답 데이터 구성
     const data = stellarSystems.map(system => ({
       id: system.id,
       title: system.title,
       galaxy_id: system.galaxy_id,
       creator_id: system.creator_id,
-      creator_name: creatorName, // 모든 시스템이 현재 사용자 소유이므로 동일한 이름
+      creator_name: system.creator.username, // 사용자 이름 포함
       created_at: system.created_at,
       updated_at: system.updated_at,
       like_count: system.likes.length,
@@ -681,20 +663,19 @@ export class StellarSystemService {
       originalSourceName = originalSource?.title ?? '';
     }
 
-    // 사용자 이름들 조회 (creator_name, author_name)
-    let creatorName: string = '';
-    let authorName: string = '';
+    // 사용자 이름 조회
+    let creatorName = '';
+    let authorName = '';
 
-    // creator와 author가 동일한 경우 중복 조회 방지
+    // creator와 author가 같은 경우 한번만 조회
     if (system.creator_id === system.author_id) {
-      const creator = await this.prisma.user.findUnique({
+      const user = await this.prisma.user.findUnique({
         where: { id: system.creator_id },
         select: { username: true },
       });
-      creatorName = creator?.username ?? '';
-      authorName = creatorName;
+      creatorName = authorName = user?.username ?? '';
     } else {
-      // creator와 author가 다른 경우 각각 조회
+      // 다른 경우 각각 조회
       const [creator, author] = await Promise.all([
         this.prisma.user.findUnique({
           where: { id: system.creator_id },
