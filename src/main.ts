@@ -71,7 +71,7 @@ async function bootstrap() {
 
   // CORS 설정 (운영 도메인 환경변수로 동적 허용)
   // FRONTEND_URL="http://a.com,http://b.com" 형태 지원
-  
+
   const frontendEnv = process.env.FRONTEND_URL || '';
   // 기본 오리진: 로컬 개발용. 프로덕션에서는 FRONTEND_URL 환경변수 사용 권장
   const defaultOrigins = [
@@ -93,7 +93,7 @@ async function bootstrap() {
   // 프록시(nginx 등) 뒤에서 실행 시 클라이언트 IP 등 신뢰 설정이 필요할 수 있습니다.
   // ExpressAdapter 사용 시 아래 설정이 적용됩니다. (현재는 기본 어댑터)
   // (app.getHttpAdapter().getInstance() as any).set('trust proxy', 1);
-  
+
   // 전역 파이프 설정 (유효성 검사)
   app.useGlobalPipes(
     new ValidationPipe({

@@ -18,7 +18,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       # HTTPS 인증서 경로(컨테이너 내부 경로)
-      - SSL_CERT_PATH=/app/ssl/cert.pem
+      - SSL_CERT_PATH=/app/ssl/fullchain.pem
       - SSL_KEY_PATH=/app/ssl/privkey.pem
     ports:
       # 호스트 7005 → 컨테이너 7005 (HTTPS 직접 종단)
