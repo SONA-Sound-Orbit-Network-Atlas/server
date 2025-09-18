@@ -5,15 +5,15 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
-import { buildPaginationMeta } from '../../common/utils/pagination.util';
 
 type FollowUserSummary = {
   id: string;
   username: string;
-  email: string;
-  about: string | null;
-  created_at: Date;
-  isMutual: boolean;
+ 
+  // 로그인 사용자(viewer) 기준 플래그
+  viewer_is_following?: boolean; // viewer → user
+  viewer_is_followed_by?: boolean; // user → viewer
+  isMutual?: boolean; // 위 두 개 모두 true
 };
 
 function makeMeta(total: number, page: number, limit: number) {
@@ -80,110 +80,193 @@ export class FollowsService {
     return this.getStats(targetUserId);
   }
 
-  /*
-   * 팔로워 목록 (나를 팔로우하는 사람들)
-   * - followee_id = userId
-   */
-  async getFollowers(userId: string, paginationDto: PaginationDto) {
-    const page = Math.max(1, Number(paginationDto.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(paginationDto.limit) || 20));
+  async getFollowersOf(
+    targetUserId: string,
+    q: PaginationDto,
+    viewerUserId?: string,
+    fillWhenAnonymous = true
+  ) {
+    const page = Math.max(1, Number(q.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(q.limit) || 20));
     const skip = (page - 1) * limit;
 
-    const [followers, myFollowings] = await this.prisma.$transaction([
-      this.prisma.follow.findMany({
-        where: { followee_id: userId },
-        skip,
-        take: limit,
-        orderBy: { created_at: 'desc' },
-        include: {
-          follower: {
-            select: {
-              id: true,
-              username: true,
-              email: true,
-              about: true,
-              created_at: true,
-            },
+    // 1) 프라미스들을 먼저 만들고(병렬 시작)
+    const listP = this.prisma.follow.findMany({
+      where: { followee_id: targetUserId },
+      skip,
+      take: limit,
+      orderBy: { created_at: 'desc' },
+      include: {
+        follower: {
+          select: {
+            id: true,
+            username: true,
           },
         },
-      }),
-      this.prisma.follow.findMany({
-        where: { follower_id: userId },
-        select: { followee_id: true },
-      }),
-    ]);
+      },
+    });
 
-    const myFollowingSet = new Set(myFollowings.map(f => f.followee_id));
+    const countP = this.prisma.follow.count({
+      where: { followee_id: targetUserId },
+    });
 
-    const items = followers.map<FollowUserSummary>(f => ({
-      id: f.follower.id,
-      username: f.follower.username,
-      email: f.follower.email,
-      about: f.follower.about ?? null,
-      created_at: f.follower.created_at,
-      isMutual: myFollowingSet.has(f.follower.id),
-    }));
+    const viewerFollowingsP = viewerUserId
+      ? this.prisma.follow.findMany({
+          where: { follower_id: viewerUserId },
+          select: { followee_id: true },
+        })
+      : Promise.resolve([] as { followee_id: string }[]);
 
-    const totalCount = await this.prisma.follow.count({
-      where: { followee_id: userId },
+    const viewerFollowersP = viewerUserId
+      ? this.prisma.follow.findMany({
+          where: { followee_id: viewerUserId },
+          select: { follower_id: true },
+        })
+      : Promise.resolve([] as { follower_id: string }[]);
+
+    // 2) 개별 await → 타입 안전
+    const edges = await listP;
+    const total = await countP;
+    const viewerFollowings = await viewerFollowingsP;
+    const viewerFollowers = await viewerFollowersP;
+
+    const viewerFollowingSet = new Set(
+      viewerFollowings.map(f => f.followee_id)
+    );
+    const viewerFollowerSet = new Set(viewerFollowers.map(f => f.follower_id));
+
+    const toFlags = (userId: string) => {
+      if (!viewerUserId) {
+        return fillWhenAnonymous
+          ? {
+              viewer_is_following: false,
+              viewer_is_followed_by: false,
+              isMutual: false,
+            }
+          : {
+              viewer_is_following: undefined,
+              viewer_is_followed_by: undefined,
+              isMutual: undefined,
+            };
+      }
+      const vf = viewerFollowingSet.has(userId);
+      const vb = viewerFollowerSet.has(userId);
+      return {
+        viewer_is_following: vf,
+        viewer_is_followed_by: vb,
+        isMutual: vf && vb,
+      };
+    };
+
+    const items: FollowUserSummary[] = edges.map(e => {
+      const u = e.follower;
+      return {
+        id: u.id,
+        username: u.username,
+        ...toFlags(u.id),
+      };
     });
 
     return {
-      meta: makeMeta(totalCount, page, limit),
+      meta: makeMeta(total, page, limit),
       items,
     };
   }
 
-  async getFollowings(userId: string, paginationDto: PaginationDto) {
-    const page = Math.max(1, Number(paginationDto.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(paginationDto.limit) || 20));
+  async getFollowingsOf(
+    targetUserId: string,
+    q: PaginationDto,
+    viewerUserId?: string, // 비로그인 허용
+    fillWhenAnonymous: boolean = true // 비로그인 시 false로 채울지(undefined로 숨길지)
+  ) {
+    const page = Math.max(1, Number(q.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(q.limit) || 20));
     const skip = (page - 1) * limit;
 
-    const [followings, followersOfMe] = await this.prisma.$transaction([
-      this.prisma.follow.findMany({
-        where: { follower_id: userId },
-        skip,
-        take: limit,
-        orderBy: { created_at: 'desc' },
-        include: {
-          followee: {
-            select: {
-              id: true,
-              username: true,
-              email: true,
-              about: true,
-              created_at: true,
-            },
+    // 1) 병렬 실행할 프라미스들 준비
+    const listP = this.prisma.follow.findMany({
+      where: { follower_id: targetUserId }, // target이 팔로우하는 사람들
+      skip,
+      take: limit,
+      orderBy: { created_at: 'desc' },
+      include: {
+        followee: {
+          select: {
+            id: true,
+            username: true,
           },
         },
-      }),
-      this.prisma.follow.findMany({
-        where: { followee_id: userId },
-        select: { follower_id: true },
-      }),
-    ]);
+      },
+    });
 
-    const followersOfMeSet = new Set(followersOfMe.map(f => f.follower_id));
+    const countP = this.prisma.follow.count({
+      where: { follower_id: targetUserId },
+    });
 
-    const items = followings.map<FollowUserSummary>(f => ({
-      id: f.followee.id,
-      username: f.followee.username,
-      email: f.followee.email,
-      about: f.followee.about ?? null,
-      created_at: f.followee.created_at,
-      isMutual: followersOfMeSet.has(f.followee.id),
-    }));
+    const viewerFollowingsP = viewerUserId
+      ? this.prisma.follow.findMany({
+          where: { follower_id: viewerUserId }, // viewer → X
+          select: { followee_id: true },
+        })
+      : Promise.resolve([] as { followee_id: string }[]);
 
-    const totalCount = await this.prisma.follow.count({
-      where: { follower_id: userId },
+    const viewerFollowersP = viewerUserId
+      ? this.prisma.follow.findMany({
+          where: { followee_id: viewerUserId }, // X → viewer
+          select: { follower_id: true },
+        })
+      : Promise.resolve([] as { follower_id: string }[]);
+
+    // 2) 개별 await (타입 안정)
+    const edges = await listP;
+    const total = await countP;
+    const viewerFollowings = await viewerFollowingsP;
+    const viewerFollowers = await viewerFollowersP;
+
+    // 3) viewer 기준 플래그 계산용 Set
+    const viewerFollowingSet = new Set(
+      viewerFollowings.map(f => f.followee_id)
+    ); // viewer →
+    const viewerFollowerSet = new Set(viewerFollowers.map(f => f.follower_id)); // → viewer
+
+    const toFlags = (userId: string) => {
+      if (!viewerUserId) {
+        return fillWhenAnonymous
+          ? {
+              viewer_is_following: false,
+              viewer_is_followed_by: false,
+              isMutual: false,
+            }
+          : {
+              viewer_is_following: undefined,
+              viewer_is_followed_by: undefined,
+              isMutual: undefined,
+            };
+      }
+      const vf = viewerFollowingSet.has(userId); // viewer → user
+      const vb = viewerFollowerSet.has(userId); // user → viewer
+      return {
+        viewer_is_following: vf,
+        viewer_is_followed_by: vb,
+        isMutual: vf && vb,
+      };
+    };
+
+    // 4) 매핑
+    const items: FollowUserSummary[] = edges.map(e => {
+      const u = e.followee;
+      return {
+        id: u.id,
+        username: u.username,
+        ...toFlags(u.id),
+      };
     });
 
     return {
-      meta: makeMeta(totalCount, page, limit),
+      meta: makeMeta(total, page, limit),
       items,
     };
   }
-
   /*
    * 특정 유저의 팔로워/팔로잉 수 통계
    */

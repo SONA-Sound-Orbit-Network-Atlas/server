@@ -2,6 +2,8 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -74,13 +76,20 @@ export class AuthService {
    * 로그인
    **/
   async login(loginDto: LoginDto): Promise<LoginResponse> {
-    // 1. 사용자 찾기
-    const user = await this.prisma.user.findUnique({
-      where: { email: loginDto.email },
+    const identifier = loginDto.identifier?.trim();
+    if (!identifier) {
+      throw new BadRequestException('이메일 또는 사용자명을 입력해야 합니다.');
+    }
+
+    // 1. 사용자 찾기 (identifier가 이메일인지/사용자명인지 구분 안 하고 검색)
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email: identifier }, { username: identifier }],
+      },
     });
 
     if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      throw new UnauthorizedException('로그인에 실패했습니다.');
     }
 
     // 2. 비밀번호 검증
@@ -88,26 +97,24 @@ export class AuthService {
       loginDto.password,
       user.password
     );
-
     if (!isPasswordValid) {
-      throw new ConflictException('비밀번호가 일치하지 않습니다.');
+      throw new UnauthorizedException('로그인에 실패했습니다.');
     }
 
     // 3. JWT 토큰 생성
     const payload = {
-      email: user.email,
       sub: user.id,
+      email: user.email,
       username: user.username,
     };
 
-    // 4. 토큰을 반환 (컨트롤러에서 response에 쿠키로 설정)
     return {
       access_token: this.jwtService.sign(payload),
       user: {
         id: user.id,
         email: user.email,
-        about: user.about,
         username: user.username,
+        about: user.about,
         created_at: user.created_at,
         updated_at: user.updated_at,
       },

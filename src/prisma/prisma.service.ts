@@ -73,6 +73,37 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     await this.client.$disconnect();
     console.log('🔌 Prisma 데이터베이스 연결 해제');
   }
+  // --- $queryRaw (safe) ---
+  $queryRaw<T = unknown>(query: Prisma.Sql): Promise<T>;
+  $queryRaw<T = unknown>(
+    query: TemplateStringsArray,
+    ...values: any[]
+  ): Promise<T>;
+  $queryRaw<T = unknown>(
+    query: Prisma.Sql | TemplateStringsArray,
+    ...values: any[]
+  ): Promise<T> {
+    // PrismaClient의 원본 메서드로 위임
+    return (this.client.$queryRaw as any)(query as any, ...values);
+  }
+
+  // --- $executeRaw (safe) ---
+  $executeRaw(query: Prisma.Sql): Promise<number>;
+  $executeRaw(query: TemplateStringsArray, ...values: any[]): Promise<number>;
+  $executeRaw(
+    query: Prisma.Sql | TemplateStringsArray,
+    ...values: any[]
+  ): Promise<number> {
+    return (this.client.$executeRaw as any)(query as any, ...values);
+  }
+
+  // --- ⚠️ Unsafe: 문자열 직접 결합 금지 ---
+  $queryRawUnsafe<T = unknown>(query: string, ...values: any[]): Promise<T> {
+    return this.client.$queryRawUnsafe<T>(query, ...values);
+  }
+  $executeRawUnsafe(query: string, ...values: any[]): Promise<number> {
+    return this.client.$executeRawUnsafe(query, ...values);
+  }
 
   /**
    * 애플리케이션 종료 시 깔끔한 종료를 위한 후크 설정

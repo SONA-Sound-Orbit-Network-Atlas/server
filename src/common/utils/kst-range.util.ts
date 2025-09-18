@@ -1,7 +1,11 @@
-export type KstRange = 'week' | 'month' | 'year';
+export type KstRange = 'week' | 'month' | 'year' | 'total';
 const KST = 9 * 60 * 60 * 1000;
 
-export function getKstRangeUTC(range: KstRange): { gte: Date; lte: Date } {
+export function getKstRangeUTC(
+  range: KstRange
+): { gte: Date; lte: Date } | null {
+  if (range === 'total') return null; // ← 추가: total은 기간 필터 없음
+
   const nowUTC = new Date();
   const nowKST = new Date(nowUTC.getTime() + KST);
   const startKST = new Date(nowKST);
