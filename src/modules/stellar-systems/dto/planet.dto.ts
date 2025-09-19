@@ -70,12 +70,12 @@ export class PlanetPropertiesDto {
   @ApiProperty({
     description: '항성으로부터 거리 (Distance)',
     minimum: 1.0,
-    maximum: 20.0,
+    maximum: 60.0,
     example: 5.2,
   })
   @IsNumber()
   @Min(1.0)
-  @Max(20.0)
+  @Max(60.0)
   distanceFromStar: number;
 
   @ApiProperty({
