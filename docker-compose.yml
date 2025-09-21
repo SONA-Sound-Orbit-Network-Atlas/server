@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  sona-server:
+    image: sona/server:latest
+    container_name: sona-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      - NODE_ENV=production
+      # 애플리케이션 포트는 Dockerfile/환경(.env)와 일치시킵니다. 기본: 7005
+      - PORT=7005
+      - UPLOAD_DIR=/data/uploads
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+            # HTTPS 인증서 경로(컨테이너 내부 경로)
+      # cert.pem = 서버 인증서, chain.pem = 중간 인증서, privkey.pem = 개인키
+      - SSL_CERT_PATH=/app/ssl/cert.pem
+      - SSL_KEY_PATH=/app/ssl/privkey.pem
+      - SSL_CHAIN_PATH=/app/ssl/chain.pem
+    ports:
+      # 호스트 7005 → 컨테이너 7005 (HTTPS 직접 종단)
+      - "7005:7005"
+    volumes:
+      - sona_server_uploads:/data/uploads
+      # 로컬 개발환경: 현재 디렉토리의 ssl 폴더를 마운트
+      # 운영환경에서는 절대경로로 변경 필요 (예: /volume1/docker/sona/ssl:/app/ssl:ro)
+      - ./ssl:/app/ssl:ro
+
+volumes:
+  sona_server_uploads:
+  sona_pg_data:

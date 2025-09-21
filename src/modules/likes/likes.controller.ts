@@ -1,0 +1,381 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { LikesService } from './likes.service';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { User } from '../../auth/decorator/user.decorator';
+import { LikeTargetDto, RangkType } from './dto/likes.dto';
+import { ErrorResponseDto } from '../../common/dto/error-response.dto';
+import { PaginationDto } from '../../common/dto/pagination.dto';
+import { OptionalJwtAuthGuard } from '../../auth/optional-jwt.guard';
+
+@ApiTags('좋아요 정보 관리')
+@Controller('likes')
+export class LikesController {
+  constructor(private readonly likesService: LikesService) {}
+
+  /** 좋아요 생성 */
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '좋아요 생성' })
+  @ApiCreatedResponse({
+    description: '성공',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            message: { type: 'string', example: '좋아요가 생성되었습니다.' },
+            like: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', example: 'like_01HZXA...' },
+                user_id: { type: 'string', example: 'usr_me_001' },
+                system_id: { type: 'string', example: 'sys_123' },
+                created_at: {
+                  type: 'string',
+                  format: 'date-time',
+                  example: '2025-09-16T12:00:00.000Z',
+                },
+              },
+            },
+          },
+        },
+        example: {
+          message: '좋아요가 생성되었습니다.',
+          like: {
+            id: 'like_01HZXA...',
+            user_id: 'usr_me_001',
+            system_id: 'sys_123',
+            created_at: '2025-09-16T12:00:00.000Z',
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '대상 시스템을 찾을 수 없음',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: '이미 좋아요를 눌렀음',
+    type: ErrorResponseDto,
+  })
+  async likeSystem(@User('id') userId: string, @Body() dto: LikeTargetDto) {
+    return this.likesService.likeSystem(userId, dto);
+  }
+
+  /** 좋아요 취소 */
+  @Delete()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '좋아요 취소' })
+  @ApiOkResponse({
+    description: '성공',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            message: { type: 'string', example: '좋아요가 삭제되었습니다.' },
+          },
+        },
+        example: { message: '좋아요가 삭제되었습니다.' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '대상 시스템을 찾을 수 없음',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: '아직 좋아요를 누르지 않음',
+    type: ErrorResponseDto,
+  })
+  async unlikeSystem(@User('id') userId: string, @Body() dto: LikeTargetDto) {
+    return this.likesService.unlikeSystem(userId, dto);
+  }
+
+  /** 내가 좋아요 한 항성계 목록 조회 (보호) */
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '내가 좋아요 한 항성계 목록 조회' })
+  @ApiOkResponse({
+    description: '조회 성공',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            data: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', example: 'sys_123' },
+                  title: { type: 'string', example: '켄타우루스 자리 알파' },
+                  galaxy_id: { type: 'string', example: 'gal_001' },
+                  creator_id: { type: 'string', example: 'usr_owner_01' },
+                  created_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-09-10T08:30:00.000Z',
+                  },
+                  updated_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-09-12T15:45:00.000Z',
+                  },
+                  planet_count: { type: 'integer', example: 5 },
+                  liked_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-09-16T12:03:22.000Z',
+                  },
+                  like_count: { type: 'number', example: 1 },
+                  is_liked: { type: 'boolean', example: true },
+                  creator_name: { type: 'string', example: 'creator_name' },
+                },
+              },
+            },
+            meta: {
+              type: 'object',
+              properties: {
+                page: { type: 'integer', example: 1 },
+                limit: { type: 'integer', example: 20 },
+                total: { type: 'integer', example: 132 },
+              },
+            },
+          },
+        },
+        examples: {
+          normal: {
+            summary: '정상 목록',
+            value: {
+              data: [
+                {
+                  id: 'sys_123',
+                  title: '켄타우루스 자리 알파',
+                  galaxy_id: 'gal_001',
+                  creator_id: 'usr_owner_01',
+                  created_at: '2025-09-10T08:30:00.000Z',
+                  updated_at: '2025-09-12T15:45:00.000Z',
+                  planet_count: 5,
+                  liked_at: '2025-09-16T12:03:22.000Z',
+                  like_count: 1,
+                  is_liked: true,
+                  creator_name: 'creator_name',
+                },
+              ],
+              meta: { page: 1, limit: 20, total: 132 },
+            },
+          },
+          empty: {
+            summary: '빈 결과',
+            value: { data: [], meta: { page: 1, limit: 20, total: 0 } },
+          },
+        },
+      },
+    },
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    example: 1,
+    description: '페이지 번호',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    example: 20,
+    description: '페이지당 항목 수',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  async getMyLikedSystems(
+    @User('id') userId: string,
+    @Query() pagination: PaginationDto
+  ) {
+    return this.likesService.getMyLikes(userId, pagination);
+  }
+
+  /** 내가 좋아요 한 항성계 개수 조회 (보호) */
+  @Get('me/count')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '내가 좋아요 한 항성계 개수 조회' })
+  @ApiOkResponse({
+    description: '내가 좋아요 한 항성계 수',
+    content: {
+      'application/json': {
+        schema: { type: 'integer', example: 17 },
+        example: 17,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  async getMyLikedSystemsCount(@User('id') userId: string) {
+    return this.likesService.countMyLikedSystems(userId);
+  }
+
+  /**
+   * 좋아요 랭킹 (이번 주/이번 달/올해/랜덤) — 공개
+   */
+
+  @Get('rankings')
+  @ApiOperation({
+    summary: '좋아요 랭킹 조회 (전체/주/월/년/랜덤)',
+    description:
+      'KST 달력 기준으로 집계. rank_type이 random이면 무작위 시스템을 반환.',
+  })
+  @ApiQuery({
+    name: 'rank_type',
+    required: false,
+    enum: RangkType,
+    example: RangkType.WEEK,
+    description: '랭킹 유형 (week | month | year | random)',
+  })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiOkResponse({
+    description: '조회 성공',
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          properties: {
+            data: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', example: 'sys_987' },
+                  title: { type: 'string', example: '안드로메다-7' },
+                  galaxy_id: { type: 'string', example: 'gal_777' },
+                  creator_id: { type: 'string', example: 'usr_999' },
+                  created_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-08-01T00:00:00.000Z',
+                  },
+                  updated_at: {
+                    type: 'string',
+                    format: 'date-time',
+                    example: '2025-09-10T00:00:00.000Z',
+                  },
+                  planet_count: { type: 'integer', example: 9 },
+                  like_count: { type: 'integer', example: 42 },
+                  rank: { type: 'integer', example: 1 },
+                  is_liked: { type: 'boolean', example: false },
+                  creator_name: { type: 'string', example: 'creator_name' },
+                },
+              },
+            },
+            meta: {
+              type: 'object',
+              properties: {
+                page: { type: 'integer', example: 1 },
+                limit: { type: 'integer', example: 20 },
+                total: { type: 'integer', example: 250 },
+              },
+            },
+          },
+        },
+        example: {
+          data: [
+            {
+              id: 'sys_987',
+              title: '안드로메다-7',
+              galaxy_id: 'gal_777',
+              creator_id: 'usr_999',
+              created_at: '2025-08-01T00:00:00.000Z',
+              updated_at: '2025-09-10T00:00:00.000Z',
+              planet_count: 9,
+              like_count: 42,
+              rank: 1,
+              is_liked: false,
+              creator_name: 'creator_name',
+            },
+            {
+              id: 'sys_654',
+              title: '페가수스-3',
+              galaxy_id: 'gal_222',
+              creator_id: 'usr_555',
+              created_at: '2025-07-11T00:00:00.000Z',
+              updated_at: '2025-09-09T00:00:00.000Z',
+              planet_count: 6,
+              like_count: 37,
+              rank: 2,
+              is_liked: false,
+              creator_name: 'creator_name',
+            },
+          ],
+          meta: { page: 1, limit: 20, total: 250 },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: '잘 못된 요청',
+    type: ErrorResponseDto,
+  })
+  @UseGuards(OptionalJwtAuthGuard)
+  async getLikeRankings(
+    @Req() req: any,
+    @Query() dto: PaginationDto & { rank_type?: RangkType }
+  ) {
+    const viewerId: string | undefined = req.user?.id; // 로그인 안 했으면 undefined
+    return this.likesService.getLikeRankings(dto, viewerId);
+  }
+}

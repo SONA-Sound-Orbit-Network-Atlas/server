@@ -1,0 +1,246 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// SONA 프로젝트 데이터 모델 정의
+// 은하(갤럭시) → 항성계 → 행성(궤도/사운드) 구조
+
+model User {
+  id               String          @id @default(cuid())
+  email            String          @unique
+  username         String          @unique
+  password         String
+  about            String? // 자기소개
+  image            String? // 프로필 이미지 URL
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+  // 관계: 사용자가 소유한 항성계들 (현재 소유자)
+  created_systems  StellarSystem[] @relation("SystemCreator")
+  // 관계: 사용자가 최초 생성한 항성계들 (원작자)
+  authored_systems StellarSystem[] @relation("SystemAuthor")
+  // 관계: 좋아요한 항성계들
+  likes            Like[]
+  // 관계: 팔로우 (팔로워)
+  followers        Follow[]        @relation("UserFollowers")
+  // 관계: 팔로우 (팔로잉)
+  following        Follow[]        @relation("UserFollowing")
+  // 관계: 받은 알림들
+  notifications    Notification[]
+
+  @@map("users")
+}
+
+// 내부 클론만 지원: 생성 방식은 수동(MANUAL) 또는 클론(CLONE)
+enum CreationMethod {
+  MANUAL
+  CLONE
+}
+
+// 객체 타입 구분 (항성/행성)
+enum ObjectType {
+  STAR
+  PLANET
+}
+
+model Galaxy {
+  id         String   @id @default(cuid())
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // 관계: 이 갤럭시에 속한 항성계들 (1 Galaxy : N StellarSystem)
+  // - StellarSystem.galaxy_id -> Galaxy.id
+  stellar_systems StellarSystem[]
+
+  @@map("galaxies")
+}
+
+model StellarSystem {
+  id                 String  @id @default(cuid())
+  galaxy_id          String
+  creator_id         String  // 현재 소유자 (변경 가능)
+  author_id          String  // 최초 생성자 (불변)
+  create_source_id   String  // 현재 스텔라의 클론 소스 (CLONE일 때 직접 부모, MANUAL일 때는 자기 자신 ID)
+  original_source_id String  // 최초 스텔라 (클론 체인의 가장 첫 번째, MANUAL일 때는 자기 자신 ID)
+
+  title String
+
+  // 갤럭시 내에서의 위치 좌표 [x, y, z] - JSON 배열로 저장
+  position Json? @default("[0, 0, 0]")
+
+  created_via CreationMethod @default(MANUAL) // MANUAL | CLONE
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+
+  // ───────────────────────────── 관계 설명 ─────────────────────────────
+  // (A) 시스템이 속한 갤럭시 (N:1)
+  // - FK: galaxy_id -> galaxies.id
+  // - 갤럭시 삭제 시 해당 시스템들도 함께 삭제(onDelete: Cascade)
+  galaxy Galaxy @relation(fields: [galaxy_id], references: [id], onDelete: Cascade)
+
+  // (B) 현재 소유자 (N:1, User와 다중 관계이므로 name으로 구분)
+  // - FK: creator_id -> users.id
+  creator User @relation(fields: [creator_id], references: [id], onDelete: Cascade, name: "SystemCreator")
+
+  // (C) 최초 생성자 (N:1)
+  // - FK: author_id -> users.id
+  author User @relation(fields: [author_id], references: [id], onDelete: Cascade, name: "SystemAuthor")
+
+  // (D) 클론 계보 (Self-Reference)
+  // - 직접 부모(클론 소스) 시스템: create_source (N:1)
+  // - 자식(복제된) 시스템들: cloned_systems (1:N)
+  create_source    StellarSystem   @relation(fields: [create_source_id], references: [id], name: "CreateSource")
+  cloned_systems   StellarSystem[] @relation("CreateSource")
+  
+  // (E) 최초 스텔라 추적 (Self-Reference)
+  // - 최초 원본: original_source (N:1)
+  // - 파생된 시스템들: derived_systems (1:N)  
+  original_source  StellarSystem   @relation(fields: [original_source_id], references: [id], name: "OriginalSource")
+  derived_systems  StellarSystem[] @relation("OriginalSource")
+
+  // (F) 중앙 항성 (1:1) - 새로 추가
+  // - Star.system_id -> StellarSystem.id
+  star Star?
+
+  // (G) 이 시스템에 속한 플래닛들 (1:N)
+  // - Planet.system_id -> StellarSystem.id
+  planets Planet[]
+
+  // (H) 좋아요(선택) (1:N)
+  // - Like.system_id -> StellarSystem.id
+  // - Like 모델은 별도 정의 필요(복합 유니크로 user당 1번 제한)
+  likes Like[]
+  // 갤럭시 내 시스템명 중복 방지하고 싶으면 주석 해제:
+  // @@unique([galaxy_id, title])
+
+  @@index([galaxy_id])
+  @@index([creator_id])
+  @@index([author_id])
+  @@index([create_source_id])
+  @@index([original_source_id])
+  @@map("stellar_systems")
+}
+
+// 중앙 항성 모델 (새로 추가)
+model Star {
+  id          String     @id @default(cuid())
+  system_id   String     @unique // 1:1 관계 (한 시스템당 하나의 항성)
+  name        String     @default("CENTRAL STAR")
+  object_type ObjectType @default(STAR) // 객체 타입 (항상 STAR)
+  
+  // SONA 항성 전역 제어 속성들을 JSONB로 저장
+  // StarGlobalProperties: spin→BPM, brightness→Volume, color→Key/Scale, size→Complexity
+  properties Json?    @default("{}")
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // 관계: 소속 시스템 (1:1)
+  system StellarSystem @relation(fields: [system_id], references: [id], onDelete: Cascade)
+
+  @@map("stars")
+}
+
+model Planet {
+  id              String     @id @default(cuid())
+  system_id       String     // 소속 시스템 (N:1)
+  name            String
+  object_type     ObjectType @default(PLANET) // 객체 타입 (항상 PLANET)
+  
+  // 행성 전용 필드 (planet_type 제거, CENTRAL_STAR는 Star 테이블로 분리)
+  instrument_role String    // 'DRUM' | 'BASS' | 'CHORD' | 'MELODY' | 'ARPEGGIO' | 'PAD'
+  is_active       Boolean   @default(true) // 활성화 상태
+  
+  // SONA 행성별 개별 속성들을 JSONB로 저장 (유연성과 확장성)
+  // PlanetProperties: 개별 악기의 음색, 리듬, 공간감 등 제어
+  properties Json?    @default("{}")
+  
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  // 관계: 소속 시스템 (N:1)
+  // - FK: system_id -> stellar_systems.id
+  // - 시스템 삭제 시 플래닛도 함께 삭제
+  system StellarSystem @relation(fields: [system_id], references: [id], onDelete: Cascade)
+
+  @@index([system_id])
+  @@index([instrument_role]) // 악기 역할별 조회 최적화  
+  @@map("planets")
+}
+
+model Like {
+  id         String   @id @default(cuid())
+  user_id    String
+  system_id  String
+  created_at DateTime @default(now())
+
+  // 관계: 좋아요한 사용자
+  user   User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  // 관계: 좋아요받은 시스템
+  system StellarSystem @relation(fields: [system_id], references: [id], onDelete: Cascade)
+
+  // 유니크 제약: 한 사용자는 한 시스템에 하나의 좋아요만
+  @@unique([user_id, system_id])
+  @@index([user_id])
+  @@index([system_id])
+  @@index([system_id, created_at]) // <<
+  @@index([created_at]) // <<
+  @@map("likes")
+}
+
+model Option {
+  id         String   @id @default(cuid())
+  code       String   @unique // 'week' | 'month' | 'year' | 'random'
+  label      String // '이번 주' 등 UI용
+  sort       Int      @default(0) // 정렬
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("options")
+}
+
+model Follow {
+  follower_id String
+  followee_id String
+  created_at  DateTime @default(now())
+
+  // 관계: 팔로워
+  follower User @relation(fields: [follower_id], references: [id], onDelete: Cascade, name: "UserFollowers")
+  // 관계: 팔로잉
+  followee User @relation(fields: [followee_id], references: [id], onDelete: Cascade, name: "UserFollowing")
+
+  // 복합 Primary Key
+  @@id([follower_id, followee_id])
+  @@index([followee_id], map: "idx_follow_followee") //조회 성능을 위해 인덱스를 추가
+  @@index([follower_id], map: "idx_follow_follower")
+  @@map("follows")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  user_id     String // 알림을 받을 사용자
+  type        String // 알림 타입 ('like', 'follow', 'clone', etc.)
+  entity_type String // 엔티티 타입 ('stellar_system', 'user', etc.)
+  entity_id   String // 엔티티 ID
+  actor_id    String? // 알림을 발생시킨 사용자 ID
+  message     String? // 알림 메시지
+  read        Boolean  @default(false)
+  created_at  DateTime @default(now())
+
+  // 관계: 알림을 받는 사용자
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
