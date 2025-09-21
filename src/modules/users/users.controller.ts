@@ -90,10 +90,22 @@ export class UsersController {
     description: '사용자 ID',
     example: 'clp123abc456def',
   })
-  @ApiResponse({ status: 200, description: '프로필 수정 성공' })
+  @ApiOkResponse({
+    description: '프로필 수정 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: '프로필이 성공적으로 수정되었습니다.',
+        },
+        user: { $ref: getSchemaPath(UserResponseDto) },
+      },
+    },
+  })
   @ApiResponse({
     status: 400,
-    description: '잘못된 요청',
+    description: '잘못된 요청 (수정할 필드 없음 / 형식 오류)',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -117,29 +129,33 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '비밀번호 변경' })
-  @ApiParam({
-    name: 'id',
-    description: '사용자 ID',
-    example: 'clp123abc456def',
-  })
-  @ApiResponse({
-    status: 200,
+  @ApiOkResponse({
     description: '비밀번호 변경 성공',
-    type: UserResponseDto,
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: '비밀번호가 변경 되었습니다.' },
+      },
+    },
   })
   @ApiResponse({
-    status: 404,
-    description: '사용자를 찾을 수 없음',
-    type: ErrorResponseDto,
-  })
-  @ApiResponse({
-    status: 409,
-    description: '현재 비밀번호 불일치',
+    status: 400,
+    description: '검증 실패(형식/길이 등)',
     type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 401,
     description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자를 찾을 수 없습니다.',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: '현재 비밀번호 불일치',
     type: ErrorResponseDto,
   })
   async updatePassword(
@@ -156,18 +172,22 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '회원 탈퇴' })
-  @ApiParam({
-    name: 'id',
-    description: '사용자 ID',
-    example: 'clp123abc456def',
-  })
-  @ApiResponse({
-    status: 204,
+  @ApiBody({ type: DeleteAccountDto })
+  @ApiOkResponse({
     description: '회원 탈퇴 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: '회원탈퇴가 정상적으로 처리되었습니다.',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 400,
-    description: '검증 실패',
+    description: '검증 실패(비밀번호 형식 등)',
     type: ErrorResponseDto,
   })
   @ApiResponse({
@@ -220,17 +240,16 @@ export class UsersController {
   @ApiOperation({ summary: '프로필 이미지 업로드/교체' })
   @ApiOkResponse({
     description: '이미지 등록 성공',
-    content: {
-      'application/json': {
-        schema: { $ref: getSchemaPath(UserResponseDto) },
-        example: {
-          id: 'usr_123',
-          username: 'astro_dev',
-          email: 'astro@example.com',
-          about: 'Synth & space lover',
-          image: 'https://cdn.example.com/users/usr_123/avatar_20250916.png',
-          created_at: '2025-08-20T09:00:00.000Z',
-          updated_at: '2025-09-16T12:34:56.000Z',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: '프로필 이미지가 업데이트되었습니다.',
+        },
+        image: {
+          type: 'string',
+          example: 'https://cdn.example.com/users/usr_123/avatar_20250916.png',
         },
       },
     },
@@ -244,9 +263,7 @@ export class UsersController {
   @ApiBody({
     schema: {
       type: 'object',
-      properties: {
-        img: { type: 'string', format: 'binary' },
-      },
+      properties: { img: { type: 'string', format: 'binary' } },
       required: ['img'],
     },
   })
@@ -265,14 +282,23 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '프로필 이미지 삭제' })
-  @ApiResponse({
-    status: 200,
+  @ApiOkResponse({
     description: '이미지 삭제 성공',
-    type: UserResponseDto,
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: '프로필 이미지가 삭제되었습니다.' },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
     description: '인증 실패',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자를 찾을 수 없음',
     type: ErrorResponseDto,
   })
   async removeImage(@User('id') userId: string) {
