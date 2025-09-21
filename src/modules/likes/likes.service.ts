@@ -250,7 +250,7 @@ export class LikesService {
           if (!s) return null as any;
           return this.toSystemListItem(s, {
             like_count: r.like_count,
-            rank: idx + 1,
+            rank: skip + idx + 1,
             is_liked: viewerId ? likedSet.has(s.id) : false,
             creator_name: s.creator?.username ?? undefined,
           });
